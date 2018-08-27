@@ -1,7 +1,11 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt" (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-r7)
+(provide interp-R7)
+
+;; Note to maintainers of this code:
+;;   A copy of this interpreter is in the book and should be
+;;   kept in sync with this code.
 
 (define get-tagged-type
   (lambda (e)
@@ -12,7 +16,7 @@
   (lambda (op)
     (member op '(+ - and or not))))
 
-(define interp-r7-op
+(define interp-R7-op
   (lambda (op es)
     (match `(,op ,es)
       [`(+ ((tagged ,v1 Integer) (tagged ,v2 Integer)))
@@ -32,10 +36,10 @@
          [`(tagged #f Boolean) `(tagged #t Boolean)]
          [else `(tagged #f Boolean)])])))
          
-(define (interp-r7 env)
+(define (interp-R7 env)
   (lambda (ast)
-    (vomit "interp-r7" ast env)
-    (define recur (interp-r7 env))
+    (vomit "interp-R7" ast env)
+    (define recur (interp-R7 env))
     (match ast
       [(? symbol?) (lookup ast env)]
       [`(function-ref ,f) (lookup f env)]
@@ -49,14 +53,14 @@
       [`(define (,f ,xs ...) ,body)
        (mcons f `(lambda ,xs ,body))]
       [`(program ,ds ... ,body)
-       (let ([top-level (map (interp-r7 '()) ds)])
+       (let ([top-level (map (interp-R7 '()) ds)])
          ;; Use set-cdr! on define lambda's for mutual recursion
          (for/list ([b top-level])
            (set-mcdr! b (match (mcdr b)
                           [`(lambda ,xs ,body)
                            `(tagged (lambda ,xs ,body ,top-level) 
                                     (,@(map (lambda (x) 'Any) xs) -> Any))])))
-         ((interp-r7 top-level) body))]
+         ((interp-R7 top-level) body))]
       [`(vector ,es ...)
        (let* ([elts (map recur es)]
               [tys (map get-tagged-type elts)])
@@ -76,9 +80,9 @@
 	     (vector-ref vec n)])])]
       [`(let ([,x ,e]) ,body)
        (let ([v (recur e)])
-         ((interp-r7 (cons (cons x v) env)) body))]
+         ((interp-R7 (cons (cons x v) env)) body))]
       [`(,op ,es ...) #:when (valid-op? op)
-       (interp-r7-op op (map recur es))]
+       (interp-R7-op op (map recur es))]
       [`(eq? ,l ,r)
        `(tagged ,(equal? (recur l) (recur r)) Boolean)]
       [`(if ,q ,t ,f)
@@ -92,15 +96,17 @@
          (match f-val 
            [`(tagged (lambda (,xs ...) ,body ,lam-env) ,ty)
             (define new-env (append (map cons xs new-args) lam-env))
-            ((interp-r7 new-env) body)]
-           [else (error "interp-r7, expected function, not" f-val)]))]
+            ((interp-R7 new-env) body)]
+           [else (error "interp-R7, expected function, not" f-val)]))]
+      ;; The following case has to come last. -Jeremy
       [`(,f ,es ...)
        (define new-args (map recur es))
        (let ([f-val (recur f)])
          (match f-val 
            [`(tagged (lambda (,xs ...) ,body ,lam-env) ,ty)
             (define new-env (append (map cons xs new-args) lam-env))
-            ((interp-r7 new-env) body)]
-           [else (error "interp-r7, expected function, not" f-val)]))])))
+            ((interp-R7 new-env) body)]
+           [else (error "interp-R7, expected function, not" f-val)]))]
+      )))
 
 

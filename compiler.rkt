@@ -1,6 +1,6 @@
 #lang racket
 (require racket/fixnum)
-(require "interp.rkt")
+(require "interp-R0.rkt")
 
 ;; This exports r0-passes, defined below, to users of this file.
 (provide r0-passes)
@@ -39,7 +39,7 @@
 ;; Note that your compiler file (or whatever file provides your passes)
 ;; should be named "compiler.rkt"
 (define r0-passes
-  `( ("flipper" ,flipper ,interp-scheme)
-     ("partial evaluator" ,pe-arith ,interp-scheme)
+  `( ("flipper" ,flipper ,interp-R0)
+     ("partial evaluator" ,pe-arith ,interp-R0)
      ))
 
