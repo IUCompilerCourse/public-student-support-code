@@ -1,10 +1,11 @@
 #lang racket
 (require racket/pretty)
 (require (for-syntax racket))
-(provide debug-level debug verbose vomit
+(provide all-tests tests-for
+         debug-level debug verbose vomit
          map2 map3 b2i i2b
          fix while 
-         label-name lookup  make-dispatcher assert
+         label-name lookup  make-dispatcher assert racket-id->c-id
          read-fixnum read-program 
 	 compile compile-file check-passes interp-tests compiler-tests
 	 interp-test-suite compiler-test-suite
@@ -36,6 +37,19 @@
   (unless (exact-nonnegative-integer? n)
     (error 'at-debug-state "expected non-negative integer ~a" n))
   (>= (debug-level) n))
+
+(define all-tests
+  (map (λ (p) (car (string-split (path->string p) ".")))
+       (filter (λ (p) (string=? (cadr (string-split (path->string p) ".")) "rkt"))
+               (directory-list (build-path (current-directory) "tests")))))
+
+(define (tests-for r)
+  (map (λ (p)
+         (cadr (string-split p "_")))
+       (filter
+        (λ (p)
+          (string=? r (car (string-split p "_"))))
+        all-tests)))
 
 ;; print-label-and-values prints out the label followed the values
 ;; and the expression that generated those values
@@ -272,9 +286,8 @@
                                          (display "in program")(newline)
                                          (pretty-print new-p)(newline)
                                          (error 'check-passes
-                                                "differing results in compiler '~a' pass '~a', expected ~a, not"
-                                                name pass-name result
-                                                #;new-result
+                                                "differing results in compiler '~a' pass '~a', expected ~a, not ~a"
+                                                name pass-name result new-result
                                                 )])]
                                  [else ;; no result to check yet
                                   (loop (cdr passes) new-p new-result)]))]
@@ -628,6 +641,19 @@
 	  (display msg)
 	  (newline))
 	(void))))
+
+;; (case-> (symbol . -> . symbol) (string . -> . string))
+(define (racket-id->c-id x)
+  (define (->c-id-char c)
+    (if (or (char<=? #\A c #\Z)
+            (char<=? #\a c #\z)
+            (char<=? #\0 c #\9))
+        c
+        #\_))
+  (cond
+    [(symbol? x) (string->symbol (racket-id->c-id (symbol->string x)))]
+    [(string? x) (list->string (map ->c-id-char (string->list x)))]
+    [else (error 'racket-id->c-id "expected string or symbol: ~v" x)]))
 
 
 ;; System V Application Binary Interface
