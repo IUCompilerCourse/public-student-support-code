@@ -34,7 +34,7 @@
     (define/public (interp-op op)
       (match op
          ['+ fx+]
-     ['- (case-lambda
+         ['- (case-lambda
                [(n) (fx- 0 n)]
                [(n m) (fx- n m)])]
      ['read read-fixnum]
@@ -44,7 +44,7 @@
       (lambda (ast)
         (verbose "R0/interp-scheme" ast)
     (match ast
-           [(? symbol?)
+       [(? symbol?)
         (lookup ast env)]
        [(? integer?) ast]
        [`(let ([,x ,(app (interp-scheme env) v)]) ,body)
@@ -69,10 +69,10 @@
       (lambda (ss)
     (let loop ([env env] [ss ss])
       (cond [(null? ss)
-         env]
-        [else
-         (loop ((interp-C env) (car ss))
-               (cdr ss))]))))
+              env]
+            [else
+              (loop ((interp-C env) (car ss))
+                 (cdr ss))]))))
 
     (define/public (interp-C env)
       (lambda (ast)
@@ -90,7 +90,7 @@
            (define env ((seq-C '()) ss))
            (lookup result env)]
           [`(,op ,args ...) #:when (set-member? (primitives) op)
-       (apply (interp-op op) (map (interp-C env) args))]
+           (apply (interp-op op) (map (interp-C env) args))]
           [else
            (error "no match in interp-C0 for " ast)]
           )))
