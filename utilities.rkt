@@ -328,6 +328,7 @@
                                      (loop (cdr passes) new-p)
                                      )])]))])
               (cond [(string? x86)
+                     (debug "Compiled x86 code" x86)
                      (write-string x86 out-file)
                      (newline out-file)
                      #t]

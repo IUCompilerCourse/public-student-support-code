@@ -50,30 +50,30 @@
 ;; HW1 Passes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 ;; uniquify : env -> R1 -> R1
 (define ((uniquify env) e)
-  (error "TODO: code goes here"))
+  (error "TODO: code goes here (uniquify)"))
 
 ;; flatten : R1 -> C0-expr x (C0-stmt list) x var list
 (define (flatten e)
-  (error "TODO: code goes here"))
+  (error "TODO: code goes here (flatten)"))
 
 ;; select-instructions : C0 -> pseudo-x86
 (define (select-instructions e)
-  (error "TODO: code goes here"))
+  (error "TODO: code goes here (select-instructions)"))
 
 ;; assign-homes : homes -> pseudo-x86 -> pseudo-x86
 (define ((assign-homes homes) e)
-  (error "TODO: code goes here"))
+  (error "TODO: code goes here (assign-homes)"))
 
 ;; patch-instructions : psuedo-x86 -> x86
 (define (patch-instructions e)
-  (error "TODO: code goes here"))
+  (error "TODO: code goes here (patch-instructions)"))
 
 ;; print-x86 : x86 -> string
 (define (print-x86 e)
-  (error "TODO: code goes here"))
-
+  (error "TODO: code goes here (print-x86)"))
 
 
 ;; Define the passes to be used by interp-tests and the grader
