@@ -1,4 +1,44 @@
-# p423-public-code
+## Homework instructions
+
+For your homework exercises, you will be expected to implement various
+compiler passes. It will ultimately be up to you how exactly to do
+this, but for the first assignment you are given code templates in
+`compiler.rkt` to fill out.
+
+To start out, you must "clone" this repository:
+
+```
+   git clone https://github.com/IUCompilerCourse/public-student-support-code.git course-compiler
+```
+
+This creates a new folder `course-compiler`, which you can enter with:
+
+```
+   cd course-compiler
+```
+
+Before each assignment (and when told to by the instructor), you may need to update
+this code by pulling updates from GitHub by running this command from inside the folder:
+
+```
+   git pull
+```
+
+As you fill out the functions in `compiler.rkt`, tests are run with the
+`run-tests.rkt` module. You can run these tests either from the command
+line with:
+
+```
+   racket run-tests.rkt
+```
+
+Or by opening and running `run-tests.rkt` in DrRacket.
+
+Before running the compiler tests, you need to compile
+`runtime.c` (see below).
+
+## Public student code
+
 Utility code, test suites, etc. for the compiler course.
 
 This code will be described in the Appendix of the book.
@@ -30,5 +70,8 @@ subdirectory. You may find it amusing (I did!) to insert bugs in the
 compiler and see the errors reported. Note that `interp-tests` does not
 test the final output assembly code; you need to use `compiler-tests`
 for that purpose. The usage of `compiler-tests` is quite similar to
-`interp-tests`.
+`interp-tests`. Example uses of these testing procedures appear in
+`run-tests.rkt`.
 
+As new languages are added, `run-tests.rkt` will be extended to
+test new passes.
