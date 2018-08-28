@@ -5,10 +5,7 @@
 (require "interp-R1.rkt")
 (require "interp.rkt")
 (require "utilities.rkt")
-
-;; This exports r0-passes and r1-passes, defined below, to users of this file.
-(provide r0-passes r1-passes)
-
+(provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; R0 examples
@@ -74,20 +71,3 @@
 ;; print-x86 : x86 -> string
 (define (print-x86 e)
   (error "TODO: code goes here (print-x86)"))
-
-
-;; Define the passes to be used by interp-tests and the grader
-;; Note that your compiler file (or whatever file provides your passes)
-;; should be named "compiler.rkt"
-(define r0-passes
-  `( ("flipper" ,flipper ,interp-R0)
-     ("partial evaluator" ,pe-arith ,interp-R0)
-     ))
-(define r1-passes
-  `( ("uniquify" ,(uniquify '()) ,(interp-R1 '()))
-     ("flatten" ,flatten ,interp-C)
-     ("instruction selection" ,select-instructions ,interp-x86)
-     ("assign homes" ,(assign-homes (void)) ,interp-x86)
-     ("insert spill code" ,patch-instructions ,interp-x86)
-     ("print x86" ,print-x86 #f)
-     ))
