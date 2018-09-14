@@ -52,7 +52,7 @@
 (define ((uniquify env) e)
   (error "TODO: code goes here (uniquify)"))
 
-;; flatten : R1 -> C0-expr x (C0-stmt list) x var list
+;; flatten : R1 -> C0
 (define (flatten e)
   (error "TODO: code goes here (flatten)"))
 
