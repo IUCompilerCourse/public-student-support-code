@@ -74,4 +74,5 @@ for that purpose. The usage of `compiler-tests` is quite similar to
 `run-tests.rkt`.
 
 As new languages are added, `run-tests.rkt` will be extended to
-test new passes.
+test new passes. You will be provided with new iterations of
+the script for each assignment.
