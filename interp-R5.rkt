@@ -55,8 +55,6 @@
        (match cnd
 	      [#t (recur thn)]
 	      [#f (recur els)])]
-      [`(not ,(app recur v))
-       (match v [#t #f] [#f #t])]
       [`(and ,(app recur v1) ,e2)
        (match v1
 	      [#t (match (recur e2) [#t #t] [#f #f])]
