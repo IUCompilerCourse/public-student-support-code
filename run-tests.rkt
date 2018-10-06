@@ -16,7 +16,7 @@
 ;; Note that your compiler file (or whatever file provides your passes)
 ;; should be named "compiler.rkt"
 (define r1-passes
-  `( ("uniquify" ,(uniquify '()) ,(interp-R1 '()))
+  `( ("uniquify" ,(uniquify '()) ,(interp-R3 '()))
      ("flatten" ,flatten ,interp-C)
      ("instruction selection" ,select-instructions ,interp-x86)
      ("assign homes" ,(assign-homes (void)) ,interp-x86)
@@ -24,7 +24,7 @@
      ("print x86" ,print-x86 #f)
      ))
 (define r1a-passes
-  `( ("uniquify" ,(uniquify '()) ,(interp-R1 '()))
+  `( ("uniquify" ,(uniquify '()) ,(interp-R3 '()))
      ("flatten" ,flatten ,interp-C)
      ("instruction selection" ,select-instructions ,interp-x86)
      ("uncover live" ,uncover-live ,interp-x86)
@@ -34,7 +34,7 @@
      ("print x86" ,print-x86 #f)
      ))
 (define r2-passes
-  `( ("uniquify" ,(uniquify '()) ,(interp-R2 '()))
+  `( ("uniquify" ,(uniquify '()) ,(interp-R3 '()))
      ("flatten" ,flatten ,interp-C)
      ("instruction selection" ,select-instructions ,interp-x86)
      ("uncover live" ,uncover-live ,interp-x86)
