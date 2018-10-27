@@ -4,7 +4,7 @@
 (provide all-tests tests-for
          debug-level debug verbose vomit
          map2 map3 b2i i2b
-         fix while 
+         fix while fun-call? indirect-call?
          label-name lookup  make-dispatcher assert racket-id->c-id
          read-fixnum read-program 
 	 compile compile-file check-passes interp-tests compiler-tests
