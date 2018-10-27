@@ -162,6 +162,13 @@
     [(eqv? (system-type 'os) 'macosx) (string-append "_" name)]
     [else name]))
 
+(define (fun-call? s)
+  (or (symbol=? s 'app) (symbol=? s 'tailcall)))
+
+(define (indirect-call? s)
+  (or (symbol=? s 'indirect-callq) (symbol=? s 'indirect-jmp)))
+
+
 ;; The lookup function takes a key and an association list
 ;; and returns the corresponding value. It triggers an
 ;; error if the key is not present in the association list.
