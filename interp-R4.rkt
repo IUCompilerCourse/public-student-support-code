@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-R4)
+(provide interp-R4 interp-R4-prog)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -20,7 +20,8 @@
     ['eq? (lambda (v1 v2)
 	    (cond [(or (and (fixnum? v1) (fixnum? v2))
 		       (and (boolean? v1) (boolean? v2))
-		       (and (vector? v1) (vector? v2)))
+		       (and (vector? v1) (vector? v2))
+                       (and (void? v1) (void? v2)))
 		   (eq? v1 v2)]))]
     ['< (lambda (v1 v2)
 	  (cond [(and (fixnum? v1) (fixnum? v2))
@@ -46,50 +47,69 @@
     (verbose "R4/interp-exp" e)
     (match e
       [(? symbol?) (lookup e env)]
-      [`(let ([,x ,(app (interp-exp env) v)]) ,body)
-       (define new-env (cons (cons x v) env))
+      [`(let ([,x ,e]) ,body)
+       (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
       [(? fixnum?) e]
       [(? boolean?) e]
-      [`(if ,(app recur cnd) ,thn ,els)
-       (match cnd
-	      [#t (recur thn)]
-	      [#f (recur els)])]
-      [`(and ,(app recur v1) ,e2)
+      [`(if ,cnd ,thn ,els)
+       (define b (recur cnd))
+       (match b
+         [#t (recur thn)]
+         [#f (recur els)])]
+      [`(and ,e1 ,e2)
+       (define v1 (recur e1))
        (match v1
-	      [#t (match (recur e2) [#t #t] [#f #f])]
-	      [#f #f])]
-      [`(has-type ,(app recur v) ,t)
-       v]
+         [#t (match (recur e2) [#t #t] [#f #f])]
+         [#f #f])]
+      [`(has-type ,e ,t)
+       (recur e)]
       [`(void) (void)]
-      [`(,op ,(app recur args) ...)
+      [`(,op ,args ...)
        #:when (set-member? primitives op)
-       (apply (interp-op op) args)]
+       (apply (interp-op op) (map recur args))]
       [`(,fun ,args ...)
-       (define arg-vals (map (interp-exp env) args))
-       (define fun-val ((interp-exp env) fun))
+       (define fun-val (recur fun))
+       (define arg-vals (map recur args))
        (match fun-val
-	 [`(lambda (,xs ...) ,body)
-	  (define new-env (append (map cons xs arg-vals) env))
+	 [`(lambda (,xs ...) ,body ,fun-env)
+	  (define new-env (append (map cons xs arg-vals) fun-env))
 	  ((interp-exp new-env) body)]
 	 [else (error "interp-exp, expected function, not" fun-val)])]
-      [else (error 'interp-exp "unrecognized expression")]
+      [else (error 'interp-exp "unrecognized expression" e)]
       )))
 
-(define (interp-def env)
-  (lambda (d)
-    (match d
-      [`(define (,f [,xs : ,ps] ...) : ,rt ,body)
-       (cons f `(lambda ,xs ,body))]
-      )))
+(define (interp-def d)
+  (match d
+    [(or `(define (,f [,xs : ,ps] ...) : ,rt ,body)
+         `(define (,f [,xs : ,ps] ...) : ,rt ,_ ,body))
+     (mcons f `(lambda ,xs ,body ()))]
+    ))
 
-(define (interp-R4 env)
-  (lambda (p)
-    (verbose "R4/interp-R4" p)
-    (match p
-      ;; This first variant is needed after type checking
-      [(or `(program (type ,_) ,ds ... ,body)
-           `(program ,ds ... ,body))
-       (let ([top-level (map  (interp-def '()) ds)])
-	 ((interp-exp top-level) body))]
-      )))
+
+;; Use this version after type checking
+(define (interp-R4-prog p)
+  (verbose "R4/interp-R4-prog" p)
+  (match p
+    [`(program ,info ,ds ...)
+     (let ([top-level (map interp-def ds)])
+       (for/list ([b top-level])
+         (set-mcdr! b (match (mcdr b)
+                        [`(lambda ,xs ,body ())
+                         `(lambda ,xs ,body ,top-level)])))
+       ;; call the main function
+       ((interp-exp top-level) `(main)))]
+    ))
+
+;; This is for source programs.  
+(define (interp-R4 p)
+  (verbose "R4/interp-R4" p)
+  (match p
+    [`(program ,ds ... ,body)
+     (let ([top-level (map interp-def ds)])
+       (for/list ([b top-level])
+         (set-mcdr! b (match (mcdr b)
+                        [`(lambda ,xs ,body ())
+                         `(lambda ,xs ,body ,top-level)])))
+       ((interp-exp top-level) body))]
+    ))

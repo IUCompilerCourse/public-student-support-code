@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-R2)
+(provide interp-R2 interp-C1)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -41,30 +41,66 @@
     (define recur (interp-exp env))
     (match e
       [(? symbol?) (lookup e env)]
-      [`(let ([,x ,(app (interp-exp env) v)]) ,body)
-       (define new-env (cons (cons x v) env))
+      [`(let ([,x ,e]) ,body)
+       (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
       [(? fixnum?) e]
       [(? boolean?) e]
-      [`(if ,(app recur cnd) ,thn ,els)
-       (match cnd
-	      [#t (recur thn)]
-	      [#f (recur els)])]
-      [`(and ,(app recur v1) ,e2)
+      [`(if ,cnd ,thn ,els)
+       (define b (recur cnd))
+       (match b
+         [#t (recur thn)]
+         [#f (recur els)])]
+      [`(and ,e1 ,e2)
+       (define v1 (recur e1))
        (match v1
-	      [#t (match (recur e2) [#t #t] [#f #f])]
-	      [#f #f])]
-      [`(has-type ,(app recur v) ,t)
-       v]
-      [`(,op ,(app recur args) ...)
+         [#t (match (recur e2) [#t #t] [#f #f])]
+         [#f #f])]
+      [`(has-type ,e ,t)
+       (recur e)]
+      [`(,op ,args ...)
        #:when (set-member? primitives op)
-       (apply (interp-op op) args)]
+       (apply (interp-op op) (map recur args))]
       )))
 
-(define (interp-R2 env)
-  (lambda (p)
-    (match p
-      ;; the first variant is needed after type checking
-      [(or `(program ,_ ,e) `(program ,e))
-       ((interp-exp '()) e)]
+(define (interp-R2 p)
+  (match p
+    ;; the first variant is needed after type checking
+    [(or `(program ,_ ,e) `(program ,e))
+     ((interp-exp '()) e)]
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (interp-C1-stmt env)
+  (lambda (s)
+    (match s
+      [`(assign ,x ,e)
+       (cons (cons x ((interp-exp env) e)) env)]
+      [else
+       (error "interp-C1-stmt unmatched" s)]
       )))
+
+(define (interp-C1-tail env CFG)
+  (lambda (t)
+    (match t
+      [`(return ,e)
+       ((interp-exp env) e)]
+      [`(goto ,l)
+       ((interp-C1-tail env CFG) (dict-ref CFG l))]
+      [`(if (,op ,arg* ...) (goto ,thn-label) (goto ,els-label))
+       (if ((interp-exp env) `(,op ,@arg*))
+           ((interp-C1-tail env CFG) (dict-ref CFG thn-label))
+           ((interp-C1-tail env CFG) (dict-ref CFG els-label)))]
+      [`(seq ,s ,t2)
+       (define new-env ((interp-C1-stmt env) s))
+       ((interp-C1-tail new-env CFG) t2)]
+      [else
+       (error "interp-C1-tail unmatched" t)]
+      )))
+  
+(define (interp-C1 p)
+  (match p
+    [`(program ,info ,CFG)
+     ((interp-C1-tail '() CFG) (dict-ref CFG 'start))]
+    ))
