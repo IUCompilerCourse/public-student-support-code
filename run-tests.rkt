@@ -46,7 +46,7 @@
      ))
 (define r3-passes
   `( ("uniquify" ,(uniquify '()) ,(interp-R3 '()))
-     ("expose allocation" ,expose-allocation ,(interp-R3 '()))
+     ("expose allocation" ,expose-allocation ,interp-scheme)
      ("flatten" ,flatten ,interp-C)
      ("instruction selection" ,select-instructions ,interp-x86)
      ("uncover live" ,uncover-live ,interp-x86)

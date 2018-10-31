@@ -4,7 +4,7 @@
 (provide all-tests tests-for
          debug-level debug verbose vomit
          map2 map3 b2i i2b
-         fix while 
+         fix while fun-call? indirect-call?
          label-name lookup  make-dispatcher assert racket-id->c-id
          read-fixnum read-program 
 	 compile compile-file check-passes interp-tests compiler-tests
@@ -161,6 +161,13 @@
     [(symbol? name) (label-name (symbol->string name))]
     [(eqv? (system-type 'os) 'macosx) (string-append "_" name)]
     [else name]))
+
+(define (fun-call? s)
+  (or (symbol=? s 'app) (symbol=? s 'tailcall)))
+
+(define (indirect-call? s)
+  (or (symbol=? s 'indirect-callq) (symbol=? s 'indirect-jmp)))
+
 
 ;; The lookup function takes a key and an association list
 ;; and returns the corresponding value. It triggers an
