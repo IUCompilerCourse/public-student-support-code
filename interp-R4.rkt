@@ -62,9 +62,9 @@
       [`(has-type ,(app recur v) ,t)
        v]
       [`(void) (void)]
-      [`(,op ,(app recur args) ...)
+      [`(,op ,args ...)
        #:when (set-member? primitives op)
-       (apply (interp-op op) args)]
+       (apply (interp-op op) (map recur args))]
       [`(,fun ,args ...)
        (define arg-vals (map (interp-exp env) args))
        (define fun-val ((interp-exp env) fun))

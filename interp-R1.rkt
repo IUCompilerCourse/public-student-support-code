@@ -11,17 +11,20 @@
   (lambda (e)
     (match e
       [(? symbol?) (lookup e env)]
-      [`(let ([,x ,(app (interp-exp env) v)]) ,body)
-       (define new-env (cons (cons x v) env))
+      [`(let ([,x ,e]) ,body)
+       (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
       [(? fixnum?) e]
       [`(read)
        (define r (read))
        (cond [(fixnum? r) r]
              [else (error 'interp-R1 "expected an integer" r)])]
-      [`(- ,(app (interp-exp env) v))
+      [`(- ,e)
+       (define v ((interp-exp env) e))
        (fx- 0 v)]
-      [`(+ ,(app (interp-exp env) v1) ,(app (interp-exp env) v2))
+      [`(+ ,e1 ,e2)
+       (define v1 ((interp-exp env) e1))
+       (define v2 ((interp-exp env) e2))
        (fx+ v1 v2)]
       )))
 
