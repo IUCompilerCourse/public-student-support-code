@@ -12,7 +12,7 @@
 	 make-graph add-edge adjacent vertices print-dot
 	 general-registers registers-for-alloc caller-save callee-save
 	 arg-registers register->color registers align
-         byte-reg->full-reg print-by-type)
+         byte-reg->full-reg print-by-type any-tag)
 
 
 ;; debug state is a nonnegative integer.
@@ -775,3 +775,13 @@
 	  (newline out-file)))
       '()))
       
+(define (any-tag ty)
+  (match ty
+    ['Integer 1]		;; 001
+    ['Boolean 4]		;; 100
+    ['Void 5]                   ;; 101
+    [`(Vector ,ts ...) 2]	;; 010
+    [`(Vectorof ,t) 2]
+    [`(,ts ... -> ,rt) 3]	;; 011
+    [else (error "in any-tag, unrecognized type" ty)]
+    ))
