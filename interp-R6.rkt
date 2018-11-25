@@ -80,6 +80,17 @@
     [else (error 'interp-op "unknown operator")]
     ))
 
+;; Equality for flat types.
+(define (tyeq? t1 t2)
+  (match `(,t1 ,t2)
+    [`((Vectorof Any) (Vector ,t2s ...))
+     (for/and ([t2 t2s])
+       (eq? t2 'Any))]
+    [`((Vector ,t1s ...) (Vectorof Any))
+     (for/and ([t1 t1s])
+       (eq? t1 'Any))]
+    [else (equal? t1 t2)]))
+
 (define (interp-exp env)
   (lambda (e)
     (define recur (interp-exp env))
@@ -111,7 +122,7 @@
        (define v ((interp-exp env) e))
        (match v
          [`(tagged ,v1 ,t1)
-	  (cond [(equal? t1 t2) ;; todo: change to use tyeq? -Jeremy
+	  (cond [(tyeq? t1 t2)
 		 v1]
 		[else
 		 (error "in project, type mismatch" t1 t2)])]
