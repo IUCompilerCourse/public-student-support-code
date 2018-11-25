@@ -111,7 +111,7 @@
        (define v ((interp-exp env) e))
        (match v
          [`(tagged ,v1 ,t1)
-	  (cond [(equal? t1 t2)
+	  (cond [(equal? t1 t2) ;; todo: change to use tyeq? -Jeremy
 		 v1]
 		[else
 		 (error "in project, type mismatch" t1 t2)])]

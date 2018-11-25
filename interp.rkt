@@ -1104,7 +1104,7 @@
 	 (foldr (lambda (x y) (and x y)) #t (map (lambda (x) (tyeq? t1 x)) t2s))] ;; wtf racket, why cant i just pass and?
 	[`((Vector ,t1s ...) (Vectorof ,t2))
 	 (foldr (lambda (x y) (and x y)) #t (map (lambda (x) (tyeq? t2 x)) t1s))]
-	[else (equal? t1 t2)]))
+	[else (equal? t1 t2)])) ;; This case is wrong! -Jeremy
 
     (define/override (interp-scheme env)
       (lambda (ast)
