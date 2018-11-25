@@ -182,7 +182,7 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     // this version is good for debugging purposes -Jeremy
     new_bytes = needed_bytes;
 #else
-    while (new_bytes < needed_bytes) {
+    while (new_bytes <= needed_bytes) {
       new_bytes = 2 * new_bytes;
     }
 #endif
