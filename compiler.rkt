@@ -48,20 +48,28 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; uniquify : env -> R1 -> R1
-(define ((uniquify env) e)
+;; uniquify : R1 -> R1
+(define (uniquify e)
   (error "TODO: code goes here (uniquify)"))
 
-;; flatten : R1 -> C0
-(define (flatten e)
-  (error "TODO: code goes here (flatten)"))
+;; remove-complex-opera* : R1 -> R1
+(define (remove-complex-opera* e)
+  (error "TODO: code goes here (remove-complex-opera*)"))
+
+;; explicate-control : R1 -> C0
+(define (explicate-control e)
+  (error "TODO: code goes here (explicate-control)"))
+
+;; uncover-locals : C0 -> C0
+(define (uncover-locals e)
+  (error "TODO: code goes here (uncover-locals)"))
 
 ;; select-instructions : C0 -> pseudo-x86
 (define (select-instructions e)
   (error "TODO: code goes here (select-instructions)"))
 
-;; assign-homes : homes -> pseudo-x86 -> pseudo-x86
-(define ((assign-homes homes) e)
+;; assign-homes : pseudo-x86 -> pseudo-x86
+(define (assign-homes e)
   (error "TODO: code goes here (assign-homes)"))
 
 ;; patch-instructions : psuedo-x86 -> x86
