@@ -7,19 +7,24 @@
 (require "utilities.rkt")
 (provide (all-defined-out))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; R0 examples
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; The following pass is just a silly pass that doesn't change anything important,
-;; but is nevertheless an example of a pass. It flips the arguments of +. -Jeremy
-(define (flipper e)
+;; The following compiler pass is just a silly one that doesn't change
+;; anything important, but is nevertheless an example of a pass. It
+;; flips the arguments of +. -Jeremy
+(define (flip-exp e)
   (match e
     [(? fixnum?) e]
     [`(read) `(read)]
-    [`(- ,e1) `(- ,(flipper e1))]
-    [`(+ ,e1 ,e2) `(+ ,(flipper e2) ,(flipper e1))]
-    [`(program ,e) `(program ,(flipper e))]
+    [`(- ,e1) `(- ,(flip-exp e1))]
+    [`(+ ,e1 ,e2) `(+ ,(flip-exp e2) ,(flip-exp e1))]
+    ))
+
+(define (flip-R0 e)
+  (match e
+    [`(program ,e) `(program ,(flip-exp e))]
     ))
 
 
@@ -32,50 +37,62 @@
   (cond [(and (fixnum? r1) (fixnum? r2)) (fx+ r1 r2)]
 	[else `(+ ,r1 ,r2)]))
 
-(define (pe-arith e)
+(define (pe-exp e)
   (match e
     [(? fixnum?) e]
     [`(read) `(read)]
-    [`(- ,e1) (pe-neg (pe-arith e1))]
-    [`(+ ,e1 ,e2) (pe-add (pe-arith e1) (pe-arith e2))]
-    [`(program ,e) `(program ,(pe-arith e))]
+    [`(- ,e1) (pe-neg (pe-exp e1))]
+    [`(+ ,e1 ,e2) (pe-add (pe-exp e1) (pe-exp e2))]
     ))
 
+(define (pe-R0 p)
+  (match p
+    [`(program ,e) `(program ,(pe-exp e))]
+    ))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HW1 Passes
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (uniquify-exp symtab)
+  (lambda (e)
+    (match e
+      [(? symbol?)
+       (error "TODO: code goes here (uniquify-exp, symbol?)")]
+      [(? integer?) e]
+      [`(let ([,x ,e]) ,body)
+       (error "TODO: code goes here (uniquify-exp, let)")]
+      [`(,op ,es ...)
+       `(,op ,@(for/list ([e es]) ((uniquify-exp symtab) e)))]
+      )))
 
 ;; uniquify : R1 -> R1
-(define (uniquify e)
-  (error "TODO: code goes here (uniquify)"))
+(define (uniquify p)
+  (match p
+    [`(program ,info ,e)
+     `(program ,info ,((uniquify-exp '()) e))]
+    ))
 
 ;; remove-complex-opera* : R1 -> R1
-(define (remove-complex-opera* e)
+(define (remove-complex-opera* p)
   (error "TODO: code goes here (remove-complex-opera*)"))
 
 ;; explicate-control : R1 -> C0
-(define (explicate-control e)
+(define (explicate-control p)
   (error "TODO: code goes here (explicate-control)"))
 
-;; uncover-locals : C0 -> C0
-(define (uncover-locals e)
-  (error "TODO: code goes here (uncover-locals)"))
-
 ;; select-instructions : C0 -> pseudo-x86
-(define (select-instructions e)
+(define (select-instructions p)
   (error "TODO: code goes here (select-instructions)"))
 
 ;; assign-homes : pseudo-x86 -> pseudo-x86
-(define (assign-homes e)
+(define (assign-homes p)
   (error "TODO: code goes here (assign-homes)"))
 
 ;; patch-instructions : psuedo-x86 -> x86
-(define (patch-instructions e)
+(define (patch-instructions p)
   (error "TODO: code goes here (patch-instructions)"))
 
 ;; print-x86 : x86 -> string
-(define (print-x86 e)
+(define (print-x86 p)
   (error "TODO: code goes here (print-x86)"))

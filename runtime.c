@@ -583,7 +583,7 @@ void print_heap(int64_t** rootstack_ptr)
     if (is_ptr(*root_loc)) {
       print_vector(to_ptr(*root_loc));
     } else {
-      printf("%ld", (int64_t)*root_loc);
+      printf("%lld", (int64_t)*root_loc);
     }
     printf("\n");
   }
@@ -597,14 +597,14 @@ void print_vector(int64_t* vector_ptr)
   int64_t* scan_ptr = vector_ptr;
   int64_t* next_ptr = vector_ptr + len + 1;
 
-  printf("%ld=#(", (int64_t)vector_ptr);
+  printf("%lld=#(", (int64_t)vector_ptr);
   scan_ptr += 1;
   int64_t isPointerBits = get_ptr_bitfield(tag);
   while (scan_ptr != next_ptr) {
     if ((isPointerBits & 1) == 1 && is_ptr((int64_t*)*scan_ptr)) {
       print_vector(to_ptr((int64_t*)*scan_ptr));
     } else {
-      printf("%ld", (int64_t)*scan_ptr);
+      printf("%lld", (int64_t)*scan_ptr);
     }
     isPointerBits = isPointerBits >> 1;
     scan_ptr += 1;

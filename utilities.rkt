@@ -407,18 +407,16 @@
 ;; then there is a file with the name number (whose contents are
 ;; ignored) that ends in ".tyerr".
 
-;; (define (interp-tests name typechecker passes initial-interp test-family test-nums)
-;;   (define checker (check-passes name typechecker passes initial-interp))
-;;   (for ([test-number (in-list test-nums)])
-;;     (let ([test-name (format "~a_~a" test-family test-number)])
-;;       (debug "utilities/interp-test" test-name)
-;;       (checker test-name))))
+(define (interp-tests name typechecker passes initial-interp test-family
+                      test-nums)
+  (run-tests (interp-tests-suite name typechecker passes initial-interp
+                                 test-family test-nums)
+             (test-verbosity)))
 
-(define (interp-tests name typechecker passes initial-interp test-family test-nums)
-  (run-tests (interp-tests-suite name typechecker passes initial-interp test-family test-nums) (test-verbosity)))
-
-(define (interp-tests-suite name typechecker passes initial-interp test-family test-nums)
-  (define checker-suite (check-passes-suite name typechecker passes initial-interp))
+(define (interp-tests-suite name typechecker passes initial-interp test-family
+                            test-nums)
+  (define checker-suite (check-passes-suite name typechecker passes
+                                            initial-interp))
   (make-test-suite
    "interpreter tests"
    (for/list ([test-number (in-list test-nums)])

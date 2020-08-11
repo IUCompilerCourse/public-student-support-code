@@ -5,8 +5,7 @@
 (require "interp-R1.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
-(debug-level 1)
-;; (debug-level 4)
+;; (debug-level 1)
 
 ;; Define the passes to be used by interp-tests and the grader
 ;; Note that your compiler file (or whatever file provides your passes)
@@ -15,7 +14,6 @@
   `( ("uniquify" ,uniquify ,interp-R1)
      ("remove complex opera*" ,remove-complex-opera* ,interp-R1)
      ("explicate control" ,explicate-control ,interp-C0)
-     ("uncover-locals" ,uncover-locals ,interp-C0)
      ("instruction selection" ,select-instructions ,R1-interp-x86)
      ("assign homes" ,assign-homes ,R1-interp-x86)
      ("patch instructions" ,patch-instructions ,R1-interp-x86)
