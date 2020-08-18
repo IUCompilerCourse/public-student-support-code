@@ -16,38 +16,40 @@
 ;; flips the arguments of +. -Jeremy
 (define (flip-exp e)
   (match e
-    [(? fixnum?) e]
-    [`(read) `(read)]
-    [`(- ,e1) `(- ,(flip-exp e1))]
-    [`(+ ,e1 ,e2) `(+ ,(flip-exp e2) ,(flip-exp e1))]
+    [(Var x) e]
+    [(Prim 'read '()) (Prim 'read '())]
+    [(Prim '- (list e1)) (Prim '- (list (flip-exp e1)))]
+    [(Prim '+ (list e1 e2)) (Prim '+ (list (flip-exp e2) (flip-exp e1)))]
     ))
 
 (define (flip-R0 e)
   (match e
-    [`(program ,e) `(program ,(flip-exp e))]
+    [(Program info e) (Program info (flip-exp e))]
     ))
 
 
 ;; Next we have the partial evaluation pass described in the book.
 (define (pe-neg r)
-  (cond [(fixnum? r) (fx- 0 r)]
-	[else `(- ,r)]))
+  (match r
+    [(Int n) (fx- 0 n)]
+    [else (Prim '- (list r))]))
 
 (define (pe-add r1 r2)
-  (cond [(and (fixnum? r1) (fixnum? r2)) (fx+ r1 r2)]
-	[else `(+ ,r1 ,r2)]))
+  (match* (r1 r2)
+    [((Int n1) (Int n2)) (Int (fx+ n1 n2))]
+    [(_ _) (Prim '+ (list r1 r2))]))
 
 (define (pe-exp e)
   (match e
-    [(? fixnum?) e]
-    [`(read) `(read)]
-    [`(- ,e1) (pe-neg (pe-exp e1))]
-    [`(+ ,e1 ,e2) (pe-add (pe-exp e1) (pe-exp e2))]
+    [(Int n) (Int n)]
+    [(Prim 'read '()) (Prim 'read '())]
+    [(Prim '- (list e1)) (pe-neg (pe-exp e1))]
+    [(Prim '+ (list e1 e2)) (pe-add (pe-exp e1) (pe-exp e2))]
     ))
 
 (define (pe-R0 p)
   (match p
-    [`(program ,e) `(program ,(pe-exp e))]
+    [(Program info e) (Program info (pe-exp e))]
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -57,20 +59,20 @@
 (define (uniquify-exp symtab)
   (lambda (e)
     (match e
-      [(? symbol?)
+      [(Var x)
        (error "TODO: code goes here (uniquify-exp, symbol?)")]
-      [(? integer?) e]
-      [`(let ([,x ,e]) ,body)
+      [(Int n) (Int n)]
+      [(Let x e body)
        (error "TODO: code goes here (uniquify-exp, let)")]
-      [`(,op ,es ...)
-       `(,op ,@(for/list ([e es]) ((uniquify-exp symtab) e)))]
+      [(Prim op es)
+       (Prim op (for/list ([e es]) ((uniquify-exp symtab) e)))]
       )))
 
 ;; uniquify : R1 -> R1
 (define (uniquify p)
   (match p
-    [`(program ,info ,e)
-     `(program ,info ,((uniquify-exp '()) e))]
+    [(Program info e)
+     (Program info ((uniquify-exp '()) e))]
     ))
 
 ;; remove-complex-opera* : R1 -> R1

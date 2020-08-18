@@ -13,7 +13,7 @@
 (define (interp-op op)
   (match op
     ['+ fx+]
-    ['- (lambda (n) (fx- 0 n))]
+    ['- fx-]
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
     ['eq? (lambda (v1 v2)
@@ -40,33 +40,31 @@
   (lambda (e)
     (define recur (interp-exp env))
     (match e
-      [(? symbol?) (lookup e env)]
-      [`(let ([,x ,e]) ,body)
+      [(Var x) (lookup x env)]
+      [(Let x e body)
        (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
-      [(? fixnum?) e]
-      [(? boolean?) e]
-      [`(if ,cnd ,thn ,els)
+      [(Int n) n]
+      [(Bool b) b]
+      [(If cnd thn els)
        (define b (recur cnd))
        (match b
          [#t (recur thn)]
          [#f (recur els)])]
-      [`(and ,e1 ,e2)
+      [(Prim 'and (list e1 e2))
        (define v1 (recur e1))
        (match v1
          [#t (match (recur e2) [#t #t] [#f #f])]
          [#f #f])]
-      [`(has-type ,e ,t)
-       (recur e)]
-      [`(,op ,args ...)
-       #:when (set-member? primitives op)
-       (apply (interp-op op) (map recur args))]
+      [(Prim op args)
+       (apply (interp-op op) (for/list ([e args]) (recur e)))]
+      [else
+       (error 'interp-exp "R2: unmatch" e)]
       )))
 
 (define (interp-R2 p)
   (match p
-    ;; the first variant is needed after type checking
-    [(or `(program ,_ ,e) `(program ,e))
+    [(Program info e)
      ((interp-exp '()) e)]
     ))
 
@@ -75,7 +73,7 @@
 (define (interp-C1-stmt env)
   (lambda (s)
     (match s
-      [`(assign ,x ,e)
+      [(Assign (Var x) e)
        (cons (cons x ((interp-exp env) e)) env)]
       [else
        (error "interp-C1-stmt unmatched" s)]
@@ -84,15 +82,15 @@
 (define (interp-C1-tail env CFG)
   (lambda (t)
     (match t
-      [`(return ,e)
+      [(Return e)
        ((interp-exp env) e)]
-      [`(goto ,l)
+      [(Goto l)
        ((interp-C1-tail env CFG) (dict-ref CFG l))]
-      [`(if (,op ,arg* ...) (goto ,thn-label) (goto ,els-label))
-       (if ((interp-exp env) `(,op ,@arg*))
+      [(If (Prim op arg*) (Goto thn-label) (Goto els-label))
+       (if ((interp-exp env) (Prim op arg*))
            ((interp-C1-tail env CFG) (dict-ref CFG thn-label))
            ((interp-C1-tail env CFG) (dict-ref CFG els-label)))]
-      [`(seq ,s ,t2)
+      [(Seq s t2)
        (define new-env ((interp-C1-stmt env) s))
        ((interp-C1-tail new-env CFG) t2)]
       [else
@@ -101,6 +99,6 @@
   
 (define (interp-C1 p)
   (match p
-    [`(program ,info ,CFG)
-     ((interp-C1-tail '() CFG) (dict-ref CFG 'start))]
+    [(Program info (CFG G))
+     ((interp-C1-tail '() G) (dict-ref G 'start))]
     ))

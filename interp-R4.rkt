@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-R4 interp-R4-prog)
+(provide interp-R4)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -14,7 +14,7 @@
 (define (interp-op op)
   (match op
     ['+ fx+]
-    ['- (lambda (n) (fx- 0 n))]
+    ['- fx-]
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
     ['eq? (lambda (v1 v2)
@@ -46,70 +46,64 @@
     (define recur (interp-exp env))
     (verbose "R4/interp-exp" e)
     (match e
-      [(? symbol?) (lookup e env)]
-      [`(let ([,x ,e]) ,body)
+      [(Var x) (lookup x env)]
+      [(Let x e body)
        (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
-      [(? fixnum?) e]
-      [(? boolean?) e]
-      [`(if ,cnd ,thn ,els)
+      [(Int n) n]
+      [(Bool b) b]
+      [(If cnd thn els)
        (define b (recur cnd))
        (match b
          [#t (recur thn)]
          [#f (recur els)])]
-      [`(and ,e1 ,e2)
+      [(Prim 'and (list e1 e2))
        (define v1 (recur e1))
        (match v1
          [#t (match (recur e2) [#t #t] [#f #f])]
          [#f #f])]
-      [`(has-type ,e ,t)
+      [(HasType e t)
        (recur e)]
-      [`(void) (void)]
-      [`(,op ,args ...)
+      [(Void) (void)]
+      [(Prim op args)
        #:when (set-member? primitives op)
-       (apply (interp-op op) (map recur args))]
-      [`(,fun ,args ...)
+       (apply (interp-op op) (for/list ([e args]) (recur e)))]
+      [(Apply fun args)
        (define fun-val (recur fun))
-       (define arg-vals (map recur args))
+       (define arg-vals (for/list ([e args]) (recur e)))
        (match fun-val
 	 [`(lambda (,xs ...) ,body ,fun-env)
 	  (define new-env (append (map cons xs arg-vals) fun-env))
 	  ((interp-exp new-env) body)]
-	 [else (error "interp-exp, expected function, not" fun-val)])]
-      [else (error 'interp-exp "unrecognized expression" e)]
+	 [else (error "interp-exp, expected function, not ~a" fun-val)])]
+      [else (error 'interp-exp "unrecognized expression ~a" e)]
       )))
 
 (define (interp-def d)
   (match d
-    [(or `(define (,f [,xs : ,ps] ...) : ,rt ,body)
-         `(define (,f [,xs : ,ps] ...) : ,rt ,_ ,body))
+    [(Def f (list `[,xs : ,ps] ...) rt _ body)
      (mcons f `(lambda ,xs ,body ()))]
     ))
 
 
-;; Use this version after type checking
-(define (interp-R4-prog p)
-  (verbose "R4/interp-R4-prog" p)
-  (match p
-    [`(program ,info ,ds ...)
-     (let ([top-level (map interp-def ds)])
-       (for/list ([b top-level])
-         (set-mcdr! b (match (mcdr b)
-                        [`(lambda ,xs ,body ())
-                         `(lambda ,xs ,body ,top-level)])))
-       ;; call the main function
-       ((interp-exp top-level) `(main)))]
-    ))
-
-;; This is for source programs.  
 (define (interp-R4 p)
-  (verbose "R4/interp-R4" p)
+  (verbose "interp-R4" p)
   (match p
-    [`(program ,ds ... ,body)
-     (let ([top-level (map interp-def ds)])
+    [(ProgramDefs info ds body)
+     (let ([top-level (for/list ([d ds]) (interp-def d))])
        (for/list ([b top-level])
          (set-mcdr! b (match (mcdr b)
                         [`(lambda ,xs ,body ())
                          `(lambda ,xs ,body ,top-level)])))
        ((interp-exp top-level) body))]
+    
+    ;; For after the shrink pass.
+    [(Program info ds)
+     (let ([top-level (for/list ([d ds]) (interp-def d))])
+       (for ([b top-level])
+         (set-mcdr! b (match (mcdr b)
+                        [`(lambda ,xs ,body ())
+                         `(lambda ,xs ,body ,top-level)])))
+       ;; call the main function
+       ((interp-exp top-level) (Apply (Var 'main) '())))]
     ))

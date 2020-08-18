@@ -14,7 +14,7 @@
 (define (interp-op op)
   (match op
     ['+ fx+]
-    ['- (lambda (n) (fx- 0 n))]
+    ['- fx-]
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
     ['eq? (lambda (v1 v2)
@@ -44,34 +44,35 @@
 (define (interp-exp env)
   (lambda (e)
     (define recur (interp-exp env))
+    (verbose "R3/interp-exp" e)
     (match e
-      [(? symbol?) (lookup e env)]
-      [`(let ([,x ,e]) ,body)
+      [(Var x) (lookup x env)]
+      [(Let x e body)
        (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
-      [(? fixnum?) e]
-      [(? boolean?) e]
-      [`(if ,cnd ,thn ,els)
+      [(Int n) n]
+      [(Bool b) b]
+      [(If cnd thn els)
        (define b (recur cnd))
        (match b
          [#t (recur thn)]
          [#f (recur els)])]
-      [`(and ,e1 ,e2)
+      [(Prim 'and (list e1 e2))
        (define v1 (recur e1))
        (match v1
          [#t (match (recur e2) [#t #t] [#f #f])]
          [#f #f])]
-      [`(has-type ,e ,t)
+      [(HasType e t)
        (recur e)]
-      [`(void) (void)]
-      [`(,op ,args ...)
+      [(Void) (void)]
+      [(Prim op args)
        #:when (set-member? primitives op)
-       (apply (interp-op op) (map recur args))]
+       (apply (interp-op op) (for/list ([e args]) (recur e)))]
       )))
 
 (define (interp-R3 p)
   (match p
-    [(or `(program ,e) `(program ,_ ,e))
+    [(Program info e)
      ((interp-exp '()) e)]
     ))
 

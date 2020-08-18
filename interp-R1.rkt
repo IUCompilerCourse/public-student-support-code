@@ -10,27 +10,27 @@
 (define (interp-exp env)
   (lambda (e)
     (match e
-      [(? fixnum?) e]
-      [`(read)
+      [(Int n) n]
+      [(Prim 'read '())
        (define r (read))
        (cond [(fixnum? r) r]
              [else (error 'interp-R1 "expected an integer" r)])]
-      [`(- ,e)
+      [(Prim '- (list e))
        (define v ((interp-exp env) e))
        (fx- 0 v)]
-      [`(+ ,e1 ,e2)
+      [(Prim '+ (list e1 e2))
        (define v1 ((interp-exp env) e1))
        (define v2 ((interp-exp env) e2))
        (fx+ v1 v2)]
-      [(? symbol?) (lookup e env)]
-      [`(let ([,x ,e]) ,body)
+      [(Var x) (lookup x env)]
+      [(Let x e body)
        (define new-env (cons (cons x ((interp-exp env) e)) env))
        ((interp-exp new-env) body)]
       )))
 
 (define (interp-R1 p)
   (match p
-    [(or `(program ,e) `(program ,_ ,e)) ((interp-exp '()) e)]
+    [(Program info e) ((interp-exp '()) e)]
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,22 +38,22 @@
 (define (interp-C0-stmt env)
   (lambda (s)
     (match s
-      [`(assign ,x ,e)
+      [(Assign (Var x) e)
        (cons (cons x ((interp-exp env) e)) env)]
       )))
 
 (define (interp-C0-tail env)
   (lambda (t)
     (match t
-      [`(return ,e)
+      [(Return e)
        ((interp-exp env) e)]
-      [`(seq ,s ,t2)
+      [(Seq s t2)
        (define new-env ((interp-C0-stmt env) s))
        ((interp-C0-tail new-env) t2)]
       )))
   
 (define (interp-C0 p)
   (match p
-    [`(program ,_ ((start . ,t)))
+    [(Program _ (CFG `((start . ,t))))
      ((interp-C0-tail '()) t)]
     ))

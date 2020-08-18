@@ -1,10 +1,35 @@
 #lang racket
-
+(require racket/struct)
 (require graph)
 
-(require racket/pretty)
+;; Version 0.2
+;; ---------------------
+#|
+
+This file is updated periodically based on the internal, reference
+copy of the P423/523 compiler.
+
+Changelog:
+
+ 0.1: initial release, used 2016-2017.
+
+ 0.2: update during Fall'17 semester.
+        We removed these functions: 
+         * interp-test-suite
+         * compiler-test-suite
+        We added:
+         * parallel test running
+         * various other changes
+
+ 0.3: updated during Fall'18 semester.
+        We removed multithreading
+        We added rackunit integration
+|#
+
+(require racket/pretty racket/match)
 (require (for-syntax racket))
-(require rackunit rackunit/text-ui)
+					;(require racket/async-channel)
+(require rackunit rackunit/text-ui rackunit/gui)
 
 (provide debug-level at-debug-level? debug verbose vomit
          map2 map3 b2i i2b
@@ -16,7 +41,6 @@
          read-fixnum read-program 
 	 compile compile-file check-passes-suite interp-tests compiler-tests
          compiler-tests-gui compiler-tests-suite
-	 ;make-graph add-edge adjacent vertices 
          print-dot
          use-minimal-set-of-registers!
 	 general-registers num-registers-for-alloc caller-save callee-save
@@ -24,7 +48,35 @@
          registers align byte-reg->full-reg print-by-type strip-has-type
          make-lets dict-set-all dict-remove-all goto-label get-CFG 
          symbol-append any-tag
-         tests-for all-tests)
+         
+         (struct-out Prim) (struct-out Var)
+         (struct-out Int) (struct-out Let)
+         (struct-out Program) (struct-out ProgramDefs)
+         (struct-out Bool) (struct-out If)
+         (struct-out HasType)
+         (struct-out Void)
+         (struct-out Apply)
+         (struct-out Def)
+         (struct-out Lambda)
+         (struct-out FunRef) (struct-out FunRefArity)
+         (struct-out Inject) (struct-out Project)
+         (struct-out ValueOf) (struct-out TagOf)
+           
+         (struct-out Assign) (struct-out Seq) (struct-out Return)
+         (struct-out Goto) (struct-out Collect) (struct-out CollectionNeeded?)
+         (struct-out GlobalValue)
+         (struct-out Allocate) (struct-out AllocateProxy)
+         (struct-out Call) (struct-out TailCall)
+         (struct-out CFG)
+         
+         (struct-out Imm) (struct-out Reg) (struct-out Deref)
+         (struct-out Instr) (struct-out Callq) (struct-out IndirectCallq)
+         (struct-out Jmp) (struct-out TailJmp)
+         (struct-out Label) (struct-out Block)
+         (struct-out StackArg)
+
+         (struct-out JmpIf) (struct-out ByteReg)
+         )
 
 ;; debug state is a nonnegative integer.
 ;; The easiest way to increment it is passing the -d option
@@ -57,19 +109,6 @@
   (cond [(>= (debug-level) 1) 'verbose]
         [else 'normal]))
 
-(define all-tests
-  (map (lambda (p) (car (string-split (path->string p) ".")))
-       (filter (lambda (p) (string=? (cadr (string-split (path->string p) ".")) "rkt"))
-               (directory-list (build-path (current-directory) "tests")))))
-
-(define (tests-for r)
-  (map (lambda (p)
-         (cadr (string-split p "_")))
-       (filter
-        (lambda (p)
-          (string=? r (car (string-split p "_"))))
-        all-tests)))
-
 ;; print-label-and-values prints out the label followed the values
 ;; and the expression that generated those values
 ;; The label is formated with the file and line number of the
@@ -86,7 +125,8 @@
            (printf "~a @ ~a:~a\n" label #,src #,lno)
         (begin
           (printf "~a:\n" 'value)
-          (if (string? value)
+          (pretty-print value)
+          #;(if (string? value)
               (display value)
               (pretty-display value))
           (newline))
@@ -115,6 +155,446 @@
 (define-debug-level debug 2)
 (define-debug-level verbose 3)
 (define-debug-level vomit 4)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Abstract Syntax Tree struct definitions
+
+(define (make-recur port mode)
+  (case mode
+    [(#t) write]
+    [(#f) display]
+    [else (lambda (p port) (print p port mode))]
+    ))
+
+(define (newline-and-indent port col)
+  (let ([lead (if col (make-string col #\space) "")])
+    (newline port)
+    (write-string lead port)
+    ))
+
+(struct Var (name) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Var x)
+        (write x port)]))])
+
+(struct Int (value) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Int n)
+        (write n port)]))])
+
+(struct Imm (value) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Imm n)
+        (write-string "$" port)
+        (write n port)]))])
+
+(struct Prim (op arg*)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Prim op arg*)
+          (write-string "(" port)
+          (write-string (symbol->string op) port)
+          (for ([arg arg*])
+            (write-string " " port)
+            (recur arg port))
+          (write-string ")" port)
+          ])))])
+
+(struct Let (var rhs body)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Let x rhs body)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "(let ([" port)
+            (write-string (symbol->string x) port)
+            (write-string " " port)
+            (recur rhs port)
+            (write-string "])" port)
+            (newline-and-indent port col)
+            (write-string "   " port) ;; indent body
+            (recur body port)
+            (write-string ")" port)
+            (newline-and-indent port col)
+            )])))])
+
+(struct CFG (block*) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(CFG G)
+          (for/list ([(label tail) (in-dict G)])
+            (write label port)
+            (write-string ":" port)
+            (newline port)
+            (write-string "    " port)
+            (recur tail port)
+            (newline port))])))])
+
+(define (Program-print ast port mode)
+  (let ([recur (make-recur port mode)])
+    (match ast
+      [(Program info body)
+       (write-string "program:" port)
+       (newline port)
+       (recur body port) 
+       ])))
+(struct Program (info body) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Program-print)])
+
+(define (ProgramDefs-print ast port mode)
+  (let ([recur (make-recur port mode)])
+    (match ast
+      [(ProgramDefs info def* body)
+       (write-string "functions:" port)
+       (newline port)
+       (for ([def def*]) (recur def port))
+       (newline port)
+       (write-string "program:" port)
+       (newline port)
+       (recur body port)
+       ])))
+(struct ProgramDefs (info def* body) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc ProgramDefs-print)])
+  
+(struct Bool (value) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Bool b)
+        (write b port)]))])
+
+
+(struct If (cnd thn els)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(If cnd thn els)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "(if" port)
+            (write-string " " port)
+            (recur cnd port)
+            (newline-and-indent port col)
+            (write-string "   " port) ;; indent 
+            (recur thn port)
+            (newline-and-indent port col)
+            (write-string "   " port) ;; indent 
+            (recur els port)
+            (newline-and-indent port col)
+            (write-string ")" port)
+            )])))])
+
+
+(struct Void () #:transparent)
+
+(struct Apply (fun arg*)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Apply fun arg*)
+          (write-string "(" port)
+          (recur fun port)
+          (for ([arg arg*])
+            (write-string " " port)
+            (recur arg port))
+          (write-string ")" port)
+          ])))])
+  
+(struct Def (name param* rty info body)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Def name ps rty info body)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "(define " port)
+            (write-string (symbol->string name) port)
+            (write-string " " port)
+            (recur ps port)
+            (write-string " " port)
+            (recur rty port)
+            (newline-and-indent port col)
+            (write-string "   " port)
+            (recur body port) ;; this needs work -Jeremy
+            (write-string ")" port)
+            (newline-and-indent port col)            
+            )
+          ])))])
+  
+(struct Lambda (param* rty body) #:transparent)
+(struct Inject (value type) #:transparent)
+(struct ValueOf (value type) #:transparent)
+(struct TagOf (value) #:transparent)
+(struct Project (value type)  #:transparent)
+  
+(struct FunRef (name)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(FunRef f)
+        (write f port)]))])
+  
+(struct FunRefArity (name arity) #:transparent)
+  
+(define (Assign-print assign port mode)
+  (let ([recur (make-recur port mode)])
+    (match assign
+      [(Assign lhs rhs)
+       (let-values ([(line col pos) (port-next-location port)])
+         (recur lhs port)
+         (write-string " " port)
+         (write-string "=" port)
+         (write-string " " port)
+         (recur rhs port)
+         (write-string ";" port)
+         (newline-and-indent port col))         
+       ])))
+(struct Assign (lhs rhs) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Assign-print)])
+
+(define (Seq-print ast port mode)
+  (let ([recur (make-recur port mode)])
+    (match ast
+      [(Seq fst snd)
+       (recur fst port)
+       (recur snd port)])))
+(struct Seq (fst snd) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Seq-print)])
+  
+(define (Return-print ast port mode)
+  (let ([recur (make-recur port mode)])
+    (match ast
+      [(Return e)
+       (let-values ([(line col pos) (port-next-location port)])
+         (write-string "return" port)
+         (write-string " " port)
+         (recur e port)
+         (write-string ";" port)
+         (newline-and-indent port col))
+       ])))
+(struct Return (arg) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Return-print)])
+
+(struct Goto (label) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Goto label)
+        (write-string "goto" port)
+        (write-string " " port)
+        (write label port)
+        (write-string ";" port)
+        ]))])
+
+
+(struct HasType (expr type) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(HasType expr type)
+          (recur expr port)
+          ])))])
+
+(struct GlobalValue (name)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(GlobalValue name)
+        (write-string (symbol->string name) port)
+        ]))])
+  
+(struct Collect (size) #:transparent)
+(struct CollectionNeeded? (size) #:transparent)
+(struct Allocate (amount type) #:transparent)
+(struct AllocateProxy (type) #:transparent)
+(struct Call (fun arg*)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Call fun arg*)
+          (write-string "(" port)
+          (recur fun port)
+          (for ([arg arg*])
+            (write-string " " port)
+            (recur arg port))
+          (write-string ")" port)
+          ])))])
+
+(struct TailCall (fun arg*)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(TailCall fun arg*)
+          (write-string "(" port)
+          (recur fun port)
+          (for ([arg arg*])
+            (write-string " " port)
+            (recur arg port))
+          (write-string ")" port)
+          ])))])
+
+(define (Reg-print reg port mode)
+  (match reg
+    [(Reg r)
+     (write-string "%" port)
+     (write r port)]))
+(struct Reg (name) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Reg-print)])
+
+(define (Deref-print dr port mode)
+  (match dr
+    [(Deref reg offset)
+     (write offset port)
+     (write-string "(" port)
+     (write-string "%" port)
+     (write reg port)
+     (write-string ")" port)
+     ]))
+(struct Deref (reg offset) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Deref-print)])
+
+(struct Instr (name arg*) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Instr name arg*)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write name port)
+            (for ([arg arg*])
+              (write-string " " port)
+              (recur arg port))
+            (newline-and-indent port col)
+            )])))])
+
+(struct Callq (target)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Callq target)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "callq" port)
+          (write-string " " port)
+          (write target port)
+          (newline-and-indent port col))
+        ]))])
+
+(struct IndirectCallq (target)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(IndirectCallq target)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "callq" port)
+            (write-string " " port)
+            (write-string "*" port)
+            (recur target port)
+            (newline-and-indent port col))])))])
+
+(struct Jmp (target) #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Jmp target)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "jmp" port)
+          (write-string " " port)
+          (write target port)
+          (newline-and-indent port col))
+        ]))])
+  
+(struct TailJmp (target) #:transparent)
+(struct Label (instr) #:transparent)
+
+
+(define (Block-print bl port mode)
+  (let ([recur (make-recur port mode)])
+    (match bl
+      [(Block info instr*)
+       (for ([instr instr*])
+         (recur instr port))
+       ])))
+(struct Block (info instr*) #:transparent
+  #:methods gen:custom-write
+  [(define write-proc Block-print)])
+
+(struct StackArg (number) #:transparent)
+
+(struct ByteReg (name) #:transparent)
+
+(struct JmpIf (cnd target)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(JmpIf cnd target)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "j" port)
+          (write cnd port)
+          (write-string " " port)
+          (write target port)
+          (newline-and-indent port col))
+        ]))])
+  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define src-primitives
+  '(read + - eq? < <= > >= and or not vector vector-ref vector-set!))
+
+(define (parse-exp e)
+  (match e
+    [(? symbol?) (Var e)]
+    [(? fixnum?) (Int e)]
+    [(? boolean?) (Bool e)]
+    [`(void) (Void)]
+    [`(let ([,x ,rhs]) ,body) (Let x (parse-exp rhs) (parse-exp body))]
+    [`(if ,cnd ,thn ,els) (If (parse-exp cnd) (parse-exp thn) (parse-exp els))]
+    [`(lambda: ,ps : ,rt ,body)
+     (Lambda ps rt (parse-exp body))]
+    [`(,op ,es ...)
+     #:when (set-member? src-primitives op)
+     (Prim op (for/list ([e es]) (parse-exp e)))]
+    [`(,e ,es ...)
+     (Apply (parse-exp e) (for/list ([e es]) (parse-exp e)))]
+    ))
+
+(define (parse-def d)
+  (match d
+    [`(define (,f ,ps ...) : ,rty ,body)
+     (Def f ps rty '() (parse-exp body))]
+    ))
+
+(define (parse-program p)
+  (match p
+    [`(program ,info ,body)
+     (Program info (parse-exp body))]
+    [`(program ,info ,def* ... ,body)
+     (ProgramDefs info
+                  (for/list ([d def*]) (parse-def d))
+                  (parse-exp body))]
+    ))
 
 (define-syntax-rule (while condition body ...)
   (let loop ()
@@ -226,8 +706,9 @@
     (call-with-input-file path
       (lambda (f)
         `(program () ,@(for/list ([e (in-port read f)]) e)))))
-  (debug "utilities/read-program" input-prog)
-  input-prog)
+  (define parsed-prog (parse-program input-prog))
+  (debug "utilities/read-program" parsed-prog)
+  parsed-prog)
 
 (define (make-dispatcher mt)
   (lambda (e . rest)
@@ -260,10 +741,10 @@
 ;; raises an error using the (error) function when it encounters a
 ;; type error, or returns #f when it encounters a type error. 
 
-#;(define (strip-has-type e)
+(define (strip-has-type e)
   e)
 
-(define (strip-has-type e)
+#;(define (strip-has-type e)
   (match e 
     [`(has-type ,e ,T)
      (strip-has-type e)]
@@ -369,6 +850,7 @@
       (lambda (out-file)
         (define sexp (read-program prog-file-name))
         (define tsexp (test-typecheck typechecker sexp))
+        (trace "compile-file: output of type check" tsexp)
         (if tsexp
             (let ([x86 (let loop ([passes passes] [p tsexp])
                          (cond [(null? passes) p]
@@ -407,16 +889,18 @@
 ;; then there is a file with the name number (whose contents are
 ;; ignored) that ends in ".tyerr".
 
-(define (interp-tests name typechecker passes initial-interp test-family
-                      test-nums)
-  (run-tests (interp-tests-suite name typechecker passes initial-interp
-                                 test-family test-nums)
-             (test-verbosity)))
+;; (define (interp-tests name typechecker passes initial-interp test-family test-nums)
+;;   (define checker (check-passes name typechecker passes initial-interp))
+;;   (for ([test-number (in-list test-nums)])
+;;     (let ([test-name (format "~a_~a" test-family test-number)])
+;;       (debug "utilities/interp-test" test-name)
+;;       (checker test-name))))
 
-(define (interp-tests-suite name typechecker passes initial-interp test-family
-                            test-nums)
-  (define checker-suite (check-passes-suite name typechecker passes
-                                            initial-interp))
+(define (interp-tests name typechecker passes initial-interp test-family test-nums)
+  (run-tests (interp-tests-suite name typechecker passes initial-interp test-family test-nums) (test-verbosity)))
+
+(define (interp-tests-suite name typechecker passes initial-interp test-family test-nums)
+  (define checker-suite (check-passes-suite name typechecker passes initial-interp))
   (make-test-suite
    "interpreter tests"
    (for/list ([test-number (in-list test-nums)])
@@ -430,7 +914,9 @@
 (define (result-check res expected)
    (or
     (equal? res (string->number expected))
-    (string=? res expected)
+    (if (string? res)
+	(string=? res expected)
+	(string=? (number->string res) expected))
     (equal? (with-input-from-string res read)
             (with-input-from-string expected read))))
 
@@ -493,43 +979,37 @@
               [typechecks (compiler (format "tests/~a.rkt" test-name))])
          (test-suite
           test-name
-          (test-case
-           "compilation"
-           (test-case
-            "typecheck"
-            (if type-error-expected
-                (check-false typechecks "Expected expression to fail typechecking")
-                (test-case "assembly"
-                  (check-not-false typechecks "Expected expression to pass typechecking")
-                  (let ([gcc-output (system (format "gcc -g -std=c99 runtime.o tests/~a.s -o tests/~a.out" test-name test-name))])
-                    (check-not-false gcc-output "Failed during assembly")
-                    (let ([input (if (file-exists? (format "tests/~a.in" test-name))
-                                     (format " < tests/~a.in" test-name)
-                                     "")]
-                          [output (if (file-exists? (format "tests/~a.res" test-name))
-                                      (call-with-input-file
-                                        (format "tests/~a.res" test-name)
-                                        (lambda (f) (read-line f)))
-                                      "42")]
-                          [error-expected (file-exists? (format "tests/~a.err" test-name))])
-                      (let* ([command (format "./tests/~a.out ~a" test-name input)]
-                             [result (get-value-or-fail command output)])
-                        (test-case
-                            "execution"
-                          (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
-                          (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
-                          (cond [error-expected
-                                 (check-equal? (cadr result) 'done-error (format "expected error, not: ~a" (caddr result)))
-                                 (check-equal? (caddr result) 255 (format "expected error, not: ~a" (caddr result)))]
-                                [else
-                                 (check-not-eq? (cadr result) eof "x86 execution did not produce output")
-                                 (check result-check (caddr result) output "Mismatched output from x86 execution")])))))))))))))))
+          (if type-error-expected
+              (test-case "typecheck" (check-false typechecks "Expected expression to fail typechecking"))
+	      (if (not typechecks) (fail "Expected expression to typecheck")
+		  (test-case "code generation"
+			     (let ([gcc-output (system (format "gcc -g -std=c99 runtime.o tests/~a.s -o tests/~a.out" test-name test-name))])
+			       (if (not gcc-output) (fail "Failed during assembly")
+				   (let ([input (if (file-exists? (format "tests/~a.in" test-name))
+						    (format " < tests/~a.in" test-name)
+						    "")]
+					 [output (if (file-exists? (format "tests/~a.res" test-name))
+						     (call-with-input-file
+							 (format "tests/~a.res" test-name)
+						       (lambda (f) (read-line f)))
+						     "42")]
+					 [error-expected (file-exists? (format "tests/~a.err" test-name))])
+				     (let* ([command (format "./tests/~a.out ~a" test-name input)]
+					    [result (get-value-or-fail command output)])
+				       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
+				       (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
+				       (cond [error-expected
+					      (check-equal? (cadr result) 'done-error (format "expected error, not: ~a" (caddr result)))
+					      (check-equal? (caddr result) 255 (format "expected error, not: ~a" (caddr result)))]
+					     [else
+					      (check-not-eq? (cadr result) eof "x86 execution did not produce output")
+					      (check result-check (caddr result) output "Mismatched output from x86 execution")]))))))))))))))
 
 (define (compiler-tests name typechecker passes test-family test-nums)
   (run-tests (compiler-tests-suite name typechecker passes test-family test-nums) (test-verbosity)))
 
 (define (compiler-tests-gui name typechecker passes test-family test-nums)
-  ((dynamic-require ''rackunit/gui 'test/gui) (compiler-tests-suite name typechecker passes test-family test-nums)))
+  (test/gui (compiler-tests-suite name typechecker passes test-family test-nums)))
 
 
 ;; Takes a function of 1 argument (or #f) and Racket expression, and
@@ -553,8 +1033,10 @@
                    (tcer exp))])
         (match res
           [#f #f]
-          [`(program ,elts ...) res]
-          [else exp]))))
+          ;[(Program info body) res]
+          [else res]
+          ;[else exp]
+          ))))
 
 (define assert
   (lambda (msg b)
@@ -726,11 +1208,11 @@
 (define (make-lets bs e)
   (cond [(null? bs) e]
         [(eq? (caar bs) '_)
-         `(seq ,(cdr (car bs))
-               ,(make-lets (cdr bs) e))]
+         (Seq (cdr (car bs))
+              (make-lets (cdr bs) e))]
         [else
-         `(let ([,(car (car bs)) ,(cdr (car bs))])
-            ,(make-lets (cdr bs) e))]))
+         (Let (car (car bs)) (cdr (car bs))
+              (make-lets (cdr bs) e))]))
 
 (define (dict-remove-all dict keys)
   (for/fold ([d dict]) ([k keys])
