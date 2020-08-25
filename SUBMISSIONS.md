@@ -22,6 +22,8 @@ submitting an assignment:
     so if you don't have `utilities.rkt` in the repo, we can't run your
     compiler!
 
+  * Create a `README` file that lists the members of your team.
+
   * If you're implementing an assignment which requires typechecking, also
     provide a function named `typechecker`. Note that typechecking does NOT
     need to be one of your compiler passes! Our testing frameworks' functions
@@ -31,9 +33,9 @@ submitting an assignment:
     fed to your list of passes.
 
   * If you are a undergraduate student who has implemented a challenge
-    assignment for extra credit, include a `README` file that states you have
-    done so. This helps the graders determine if we should look for this or
-    not.
+    assignment for extra credit, state that you have done so in the
+    `README` file. This helps the graders determine if we should look
+    for this or not.
 
     You are also encouraged to put any other important info in a `README` file
     if you feel it is important for the graders to know (e.g., if you didn't
