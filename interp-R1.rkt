@@ -22,9 +22,9 @@
        (define v1 ((interp-exp env) e1))
        (define v2 ((interp-exp env) e2))
        (fx+ v1 v2)]
-      [(Var x) (lookup x env)]
+      [(Var x) (dict-ref env x)]
       [(Let x e body)
-       (define new-env (cons (cons x ((interp-exp env) e)) env))
+       (define new-env (dict-set env x ((interp-exp env) e)))
        ((interp-exp new-env) body)]
       )))
 
@@ -39,7 +39,7 @@
   (lambda (s)
     (match s
       [(Assign (Var x) e)
-       (cons (cons x ((interp-exp env) e)) env)]
+       (dict-set env x ((interp-exp env) e))]
       )))
 
 (define (interp-C0-tail env)

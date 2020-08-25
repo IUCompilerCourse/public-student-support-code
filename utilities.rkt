@@ -47,7 +47,7 @@ Changelog:
 	 arg-registers rootstack-reg register->color color->register
          registers align byte-reg->full-reg print-by-type strip-has-type
          make-lets dict-set-all dict-remove-all goto-label get-CFG 
-         symbol-append any-tag
+         symbol-append any-tag parse-program
          
          (struct-out Prim) (struct-out Var)
          (struct-out Int) (struct-out Let)

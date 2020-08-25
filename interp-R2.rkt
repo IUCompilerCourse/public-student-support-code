@@ -40,9 +40,9 @@
   (lambda (e)
     (define recur (interp-exp env))
     (match e
-      [(Var x) (lookup x env)]
+      [(Var x) (dict-ref env x)]
       [(Let x e body)
-       (define new-env (cons (cons x ((interp-exp env) e)) env))
+       (define new-env (dict-set env x ((interp-exp env) e)))
        ((interp-exp new-env) body)]
       [(Int n) n]
       [(Bool b) b]
@@ -86,7 +86,7 @@
        ((interp-exp env) e)]
       [(Goto l)
        ((interp-C1-tail env CFG) (dict-ref CFG l))]
-      [(If (Prim op arg*) (Goto thn-label) (Goto els-label))
+      [(IfStmt (Prim op arg*) (Goto thn-label) (Goto els-label))
        (if ((interp-exp env) (Prim op arg*))
            ((interp-C1-tail env CFG) (dict-ref CFG thn-label))
            ((interp-C1-tail env CFG) (dict-ref CFG els-label)))]

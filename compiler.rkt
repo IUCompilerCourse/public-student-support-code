@@ -31,7 +31,7 @@
 ;; Next we have the partial evaluation pass described in the book.
 (define (pe-neg r)
   (match r
-    [(Int n) (fx- 0 n)]
+    [(Int n) (Int (fx- 0 n))]
     [else (Prim '- (list r))]))
 
 (define (pe-add r1 r2)
@@ -51,6 +51,14 @@
   (match p
     [(Program info e) (Program info (pe-exp e))]
     ))
+
+(define (test-pe p)
+  (assert "testing pe-R0"
+     (equal? (interp-R0 p) (interp-R0 (pe-R0 p)))))
+
+(test-pe (parse-program `(program () (+ 10 (- (+ 5 3))))))
+(test-pe (parse-program `(program () (+ 1 (+ 3 1)))))
+(test-pe (parse-program `(program () (- (+ 3 (- 5))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HW1 Passes

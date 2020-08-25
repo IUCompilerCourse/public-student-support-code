@@ -46,9 +46,9 @@
     (define recur (interp-exp env))
     (verbose "R3/interp-exp" e)
     (match e
-      [(Var x) (lookup x env)]
+      [(Var x) (dict-ref env x)]
       [(Let x e body)
-       (define new-env (cons (cons x ((interp-exp env) e)) env))
+       (define new-env (dict-set env x ((interp-exp env) e)))
        ((interp-exp new-env) body)]
       [(Int n) n]
       [(Bool b) b]
