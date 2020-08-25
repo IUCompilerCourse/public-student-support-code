@@ -11,17 +11,26 @@
 ;;   the match 'app' feature because the book doesn't introduce
 ;;   that until a later.
 
-(define (interp-exp e)
-  (match e
-    [(? fixnum?) e]
-    [`(read)
-     (let ([r (read)])
+(define (interp-exp env)
+  (lambda (e)
+    (match e
+      [(Int n) n]
+      [(Prim 'read '())
+       (define r (read))
        (cond [(fixnum? r) r]
-             [else (error 'interp-R0 "input not an integer" r)]))]
-    [`(- ,e1)     (fx- 0 (interp-exp e1))]
-    [`(+ ,e1 ,e2) (fx+ (interp-exp e1) (interp-exp e2))]))
+             [else (error 'interp-R1 "expected an integer" r)])]
+      [(Prim '- (list e))
+       (define v ((interp-exp env) e))
+       (fx- 0 v)]
+      [(Prim '+ (list e1 e2))
+       (define v1 ((interp-exp env) e1))
+       (define v2 ((interp-exp env) e2))
+       (fx+ v1 v2)]
+      )))
 
 (define (interp-R0 p)
   (match p
-    [`(program ,e) (interp-exp e)]))
+    [(Program info e) ((interp-exp '()) e)]
+    ))
+
 
