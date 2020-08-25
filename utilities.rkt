@@ -63,6 +63,7 @@ Changelog:
          (struct-out ValueOf) (struct-out TagOf)
            
          (struct-out Assign) (struct-out Seq) (struct-out Return)
+         (struct-out IfStmt)
          (struct-out Goto) (struct-out Collect) (struct-out CollectionNeeded?)
          (struct-out GlobalValue)
          (struct-out Allocate) (struct-out AllocateProxy)
@@ -71,8 +72,9 @@ Changelog:
          
          (struct-out Imm) (struct-out Reg) (struct-out Deref)
          (struct-out Instr) (struct-out Callq) (struct-out IndirectCallq)
+         (struct-out Retq)
          (struct-out Jmp) (struct-out TailJmp)
-         (struct-out Label) (struct-out Block)
+         (struct-out Block)
          (struct-out StackArg)
 
          (struct-out JmpIf) (struct-out ByteReg)
@@ -186,14 +188,6 @@ Changelog:
        [(Int n)
         (write n port)]))])
 
-(struct Imm (value) #:transparent
-  #:methods gen:custom-write
-  [(define (write-proc ast port mode)
-     (match ast
-       [(Imm n)
-        (write-string "$" port)
-        (write n port)]))])
-
 (struct Prim (op arg*)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
@@ -241,33 +235,35 @@ Changelog:
             (recur tail port)
             (newline port))])))])
 
-(define (Program-print ast port mode)
-  (let ([recur (make-recur port mode)])
-    (match ast
-      [(Program info body)
-       (write-string "program:" port)
-       (newline port)
-       (recur body port) 
-       ])))
 (struct Program (info body) #:transparent
   #:methods gen:custom-write
-  [(define write-proc Program-print)])
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Program info body)
+          (write-string "program:" port)
+          (newline port)
+          (cond [(list? body)
+                 (for ([def body])
+                   (recur def port)
+                   (newline port))]
+                [else
+                 (recur body port)])])))])
 
-(define (ProgramDefs-print ast port mode)
-  (let ([recur (make-recur port mode)])
-    (match ast
-      [(ProgramDefs info def* body)
-       (write-string "functions:" port)
-       (newline port)
-       (for ([def def*]) (recur def port))
-       (newline port)
-       (write-string "program:" port)
-       (newline port)
-       (recur body port)
-       ])))
 (struct ProgramDefs (info def* body) #:transparent
   #:methods gen:custom-write
-  [(define write-proc ProgramDefs-print)])
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(ProgramDefs info def* body)
+          (write-string "functions:" port)
+          (newline port)
+          (for ([def def*]) (recur def port))
+          (newline port)
+          (write-string "program:" port)
+          (newline port)
+          (recur body port)
+          ])))])
   
 (struct Bool (value) #:transparent
   #:methods gen:custom-write
@@ -275,7 +271,6 @@ Changelog:
      (match ast
        [(Bool b)
         (write b port)]))])
-
 
 (struct If (cnd thn els)
   #:methods gen:custom-write
@@ -297,8 +292,32 @@ Changelog:
             (write-string ")" port)
             )])))])
 
+(struct IfStmt (cnd thn els)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(IfStmt cnd thn els)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "if " port)
+            (recur cnd port)
+            (write-string " then" port)
+            (newline-and-indent port col)
+            (write-string "   " port) ;; indent 
+            (recur thn port)
+            (newline-and-indent port col)
+            (write-string "else" port)
+            (newline-and-indent port col)            
+            (write-string "   " port) ;; indent 
+            (recur els port)
+            )])))])
 
-(struct Void () #:transparent)
+(struct Void () #:transparent
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Void)
+        (write-string "(void)" port)]))])
 
 (struct Apply (fun arg*)
   #:methods gen:custom-write
@@ -313,7 +332,38 @@ Changelog:
             (recur arg port))
           (write-string ")" port)
           ])))])
+
+(define (write-type ty port)
+  (match ty
+    [`(Vector ,tys ...)
+     (write-string "(Vector" port)
+     (for ([ty tys])
+       (write-string " " port)
+       (write-type ty port))
+     (write-string ")" port)]
+    [`(,t1 -> ,t2)
+     (write-string "(" port)
+     (write-type t1 port)
+     (write-string " -> " port)
+     (write-type t2 port)
+     (write-string ")" port)]
+    [(? symbol?)
+     (write-string (symbol->string ty) port)]
+    [else
+     (write-string "_" port)
+     ]))
   
+(define (write-params param* port)
+  (for ([param param*])
+    (match param
+      [`(,x : ,t)
+       (write-string " " port)
+       (write-string "[" port)
+       (write-string (symbol->string x) port)
+       (write-string " : " port)
+       (write-type t port)
+       (write-string "]" port)])))
+
 (struct Def (name param* rty info body)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
@@ -321,21 +371,58 @@ Changelog:
        (match ast
          [(Def name ps rty info body)
           (let-values ([(line col pos) (port-next-location port)])
-            (write-string "(define " port)
+            (write-string "(define (" port)
             (write-string (symbol->string name) port)
             (write-string " " port)
-            (recur ps port)
+            (write-params ps port)
+            (write-string ") " port)
+            (write-string ":" port)
             (write-string " " port)
-            (recur rty port)
+            (write-type rty port)
             (newline-and-indent port col)
             (write-string "   " port)
-            (recur body port) ;; this needs work -Jeremy
-            (write-string ")" port)
+            (cond [(list? body)
+                   (for ([block body])
+                     (cond [(pair? block)
+                            (write-string (symbol->string (car block)) port)
+                            (write-string ":" port)
+                            (newline-and-indent port col)
+                            (write-string "      " port)
+                            (recur (cdr block) port)
+                            (newline-and-indent port col)
+                            (write-string "   " port)]
+                           [else
+                            (recur block port)
+                            (newline-and-indent port col)
+                            (write-string "   " port)]))]
+                  [else
+                   (recur body port)])
             (newline-and-indent port col)            
+            (write-string ")" port)
+            )
+          ])))])
+
+(struct Lambda (param* rty body)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Lambda ps rty body)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "(lambda: " port)
+            (write-params ps port)
+            (write-string " " port)
+            (write-string ":" port)
+            (write-string " " port)
+            (write-type rty port)
+            (newline-and-indent port col)
+            (write-string "   " port)
+            (recur body port)
+            (write-string ")" port)
+            (newline-and-indent port col)
             )
           ])))])
   
-(struct Lambda (param* rty body) #:transparent)
 (struct Inject (value type) #:transparent)
 (struct ValueOf (value type) #:transparent)
 (struct TagOf (value) #:transparent)
@@ -348,7 +435,16 @@ Changelog:
        [(FunRef f)
         (write f port)]))])
   
-(struct FunRefArity (name arity) #:transparent)
+(struct FunRefArity (name arity)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(FunRefArity f n)
+        (write f port)
+        (write-string "{" port)
+        (write n port)
+        (write-string "}" port)
+        ]))])
   
 (define (Assign-print assign port mode)
   (let ([recur (make-recur port mode)])
@@ -361,50 +457,52 @@ Changelog:
          (write-string " " port)
          (recur rhs port)
          (write-string ";" port)
-         (newline-and-indent port col))         
+         )         
        ])))
 (struct Assign (lhs rhs) #:transparent
   #:methods gen:custom-write
   [(define write-proc Assign-print)])
 
-(define (Seq-print ast port mode)
-  (let ([recur (make-recur port mode)])
-    (match ast
-      [(Seq fst snd)
-       (recur fst port)
-       (recur snd port)])))
 (struct Seq (fst snd) #:transparent
   #:methods gen:custom-write
-  [(define write-proc Seq-print)])
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Seq fst snd)
+          (let-values ([(line col pos) (port-next-location port)])
+            (recur fst port)
+            (newline-and-indent port col)
+            (recur snd port)
+            )])))])
   
-(define (Return-print ast port mode)
-  (let ([recur (make-recur port mode)])
-    (match ast
-      [(Return e)
-       (let-values ([(line col pos) (port-next-location port)])
-         (write-string "return" port)
-         (write-string " " port)
-         (recur e port)
-         (write-string ";" port)
-         (newline-and-indent port col))
-       ])))
-(struct Return (arg) #:transparent
+(struct Return (arg)
   #:methods gen:custom-write
-  [(define write-proc Return-print)])
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Return e)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "return" port)
+            (write-string " " port)
+            (recur e port)
+            (write-string ";" port)
+            )
+          ])))])
 
-(struct Goto (label) #:transparent
+(struct Goto (label)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
        [(Goto label)
-        (write-string "goto" port)
-        (write-string " " port)
-        (write label port)
-        (write-string ";" port)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "goto" port)
+          (write-string " " port)
+          (write label port)
+          (write-string ";" port)
+          )
         ]))])
 
-
-(struct HasType (expr type) #:transparent
+(struct HasType (expr type)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (let ([recur (make-recur port mode)])
@@ -421,10 +519,36 @@ Changelog:
         (write-string (symbol->string name) port)
         ]))])
   
-(struct Collect (size) #:transparent)
+(struct Collect (size)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Collect size)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "(collect " port)
+          (write size port)
+          (write-string ");" port)
+          )
+        ]))])
+  
 (struct CollectionNeeded? (size) #:transparent)
-(struct Allocate (amount type) #:transparent)
+
+(struct Allocate (amount type) 
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Allocate amount type)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "(allocate " port)
+          (write amount port)
+          (write-string " " port)
+          (write-type type port)
+          (write-string ")" port)
+          )
+        ]))])
+
 (struct AllocateProxy (type) #:transparent)
+
 (struct Call (fun arg*)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
@@ -453,29 +577,35 @@ Changelog:
           (write-string ")" port)
           ])))])
 
-(define (Reg-print reg port mode)
-  (match reg
-    [(Reg r)
-     (write-string "%" port)
-     (write r port)]))
-(struct Reg (name) #:transparent
+(struct Imm (value) #:transparent
   #:methods gen:custom-write
-  [(define write-proc Reg-print)])
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Imm n)
+        (write-string "$" port)
+        (write n port)]))])
 
-(define (Deref-print dr port mode)
-  (match dr
-    [(Deref reg offset)
-     (write offset port)
-     (write-string "(" port)
-     (write-string "%" port)
-     (write reg port)
-     (write-string ")" port)
-     ]))
-(struct Deref (reg offset) #:transparent
+(struct Reg (name)
   #:methods gen:custom-write
-  [(define write-proc Deref-print)])
+  [(define (write-proc reg port mode)
+     (match reg
+       [(Reg r)
+        (write-string "%" port)
+        (write r port)]))])
 
-(struct Instr (name arg*) #:transparent
+(struct Deref (reg offset)
+  #:methods gen:custom-write
+  [(define (write-proc dr port mode)
+     (match dr
+       [(Deref reg offset)
+        (write offset port)
+        (write-string "(" port)
+        (write-string "%" port)
+        (write reg port)
+        (write-string ")" port)
+        ]))])
+
+(struct Instr (name arg*)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (let ([recur (make-recur port mode)])
@@ -483,9 +613,14 @@ Changelog:
          [(Instr name arg*)
           (let-values ([(line col pos) (port-next-location port)])
             (write name port)
-            (for ([arg arg*])
-              (write-string " " port)
-              (recur arg port))
+            (let ([i 0])
+              (for ([arg arg*])
+                (cond [(not (eq? i 0))
+                       (write-string "," port)])
+                (write-string " " port)
+                (recur arg port)
+                (set! i (add1 i))
+                ))
             (newline-and-indent port col)
             )])))])
 
@@ -498,6 +633,16 @@ Changelog:
           (write-string "callq" port)
           (write-string " " port)
           (write target port)
+          (newline-and-indent port col))
+        ]))])
+
+(struct Retq ()
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(Retq)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "retq" port)
           (newline-and-indent port col))
         ]))])
 
@@ -514,7 +659,7 @@ Changelog:
             (recur target port)
             (newline-and-indent port col))])))])
 
-(struct Jmp (target) #:transparent
+(struct Jmp (target)
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
@@ -526,24 +671,37 @@ Changelog:
           (newline-and-indent port col))
         ]))])
   
-(struct TailJmp (target) #:transparent)
-(struct Label (instr) #:transparent)
+(struct TailJmp (target)
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(TailJmp target)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "tailjmp" port)
+          (write-string " " port)
+          (write target port)
+          (newline-and-indent port col))
+        ]))])
 
-
-(define (Block-print bl port mode)
-  (let ([recur (make-recur port mode)])
-    (match bl
-      [(Block info instr*)
-       (for ([instr instr*])
-         (recur instr port))
-       ])))
 (struct Block (info instr*) #:transparent
   #:methods gen:custom-write
-  [(define write-proc Block-print)])
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(Block info instr*)
+          (for ([instr instr*])
+            (recur instr port))
+          ])))])
 
 (struct StackArg (number) #:transparent)
 
-(struct ByteReg (name) #:transparent)
+(struct ByteReg (name)
+  #:methods gen:custom-write
+  [(define (write-proc reg port mode)
+     (match reg
+       [(ByteReg r)
+        (write-string "%" port)
+        (write r port)]))])
 
 (struct JmpIf (cnd target)
   #:methods gen:custom-write
@@ -559,6 +717,8 @@ Changelog:
         ]))])
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parsing S-expressions into Abstract Syntax Trees (and back)
+
 
 (define src-primitives
   '(read + - eq? < <= > >= and or not vector vector-ref vector-set!))
@@ -595,6 +755,24 @@ Changelog:
                   (for/list ([d def*]) (parse-def d))
                   (parse-exp body))]
     ))
+
+(define (unparse-exp e)
+  (match e
+    [(Var x) x]
+    [(Int n) n]
+    [(Bool b) b]
+    [(Void) '(void)]
+    [(Let x rhs body)
+     `(let ([,x ,(unparse-exp rhs)]) ,(unparse-exp body))]
+    [(Lambda ps rt body)
+     `(lambda: ,ps ,rt ,(unparse-exp body))]
+    [(Prim op es)
+     `(,op ,@(map unparse-exp es))]
+    [(Apply e es)
+     `(,(unparse-exp e) ,@(map unparse-exp es))]
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (while condition body ...)
   (let loop ()
