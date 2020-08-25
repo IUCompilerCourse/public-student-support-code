@@ -1,5 +1,6 @@
 #lang racket
 (require racket/fixnum)
+(require "utilities.rkt")
 (provide interp-R0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
