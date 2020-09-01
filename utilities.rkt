@@ -1,3 +1,15 @@
+;;
+;;   WARNING!!!!
+;;
+;;   The original version of this file lives in the course-compiler repository.
+;;   There is a copy of this file in the public-student-support-code
+;;   repository.
+;;
+;;   DO NOT EDIT the version of this file in public-student-support-code
+;;   because any changes you make will be OBLITERATED the next time
+;;   someone edits the version in the course-compiler repository
+;;   and then copies it over to public-student-support-code.
+
 #lang racket
 (require racket/struct)
 (require graph)
