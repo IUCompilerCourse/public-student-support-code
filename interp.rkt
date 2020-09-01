@@ -90,14 +90,13 @@
         (define recur (interp-scheme-exp env))
 	(verbose "R1/interp-scheme-exp" ast)
 	(match ast
-	   [(? symbol?)
-	    (lookup ast env)]
-	   [(? integer?) ast]
-	   [`(let ([,x ,e]) ,body)
+           [(Var x)
+	    (lookup x env)]
+	   [(Int n) n]
+	   [(Let x e body)
             (define v (recur e))
 	    ((interp-scheme-exp (cons (cons x v) env)) body)]
-	   [`(,op ,args ...)
-	    #:when (set-member? (primitives) op)
+	   [(Prim op args)
 	    (apply (interp-op op)
                    (for/list ([e args]) (recur e)))]
 	   [else
@@ -108,7 +107,7 @@
       (lambda (ast)
 	(verbose "R1/interp-scheme" ast)
 	(match ast
-	   [(or `(program ,e)  `(program ,_ ,e) )
+	   [(Program _ e)
             ((interp-scheme-exp '()) e)]
 	   [else
 	    (error (format "R1/no match in interp-scheme for ~a" ast))]
@@ -121,10 +120,9 @@
       (lambda (ast)
         (verbose "C0/interp-C-exp" ast)
         (match ast
-          [(? symbol? x) (lookup x env)]
-          [(? integer? n) n]
-          [`(,op ,args ...)
-           #:when (set-member? (primitives) op)
+          [(Var x) (lookup x env)]
+          [(Int n) n]
+          [(Prim op args)
 	   (apply (interp-op op) (map (interp-C-exp env) args))]
           [else
            (error "C0/interp-C-exp unhandled" ast)]
@@ -133,12 +131,12 @@
     (define/public (interp-C-tail env)
       (lambda (ast)
         (match ast
-          [`(return ,e)
+          [(Return e)
            ((interp-C-exp env) e)]
           ;; (return-from-tail v env)  hmm -Jeremy
-          [`(seq ,s ,e)
+          [(Seq s t)
            (define new-env ((interp-C-stmt env) s))
-           ((interp-C-tail new-env) e)]
+           ((interp-C-tail new-env) t)]
           [else
            (error "interp-C-tail unhandled" ast)]
           )))
@@ -147,7 +145,7 @@
       (lambda (ast)
         (verbose "C0/interp-C-stmt" ast)
         (match ast
-          [`(assign ,x ,e)
+          [(Assign (Var x) e)
            (let ([v ((interp-C-exp env) e)])
              (cons (cons x v) env))]
           [else
@@ -157,9 +155,8 @@
     (define/public (interp-C ast)
       (debug "R1/interp-C" ast)
       (match ast
-        [`(program ,info ,CFG)
-         ;(define start (dict-ref CFG (symbol-append 'main 'start)))
-         (define start (dict-ref CFG 'start))
+        [(Program info (CFG G))
+         (define start (dict-ref G 'start))
          ((interp-C-tail '()) start)]
         [else
          (error "no match in interp-C for " ast)]
@@ -174,8 +171,8 @@
 
     (define/public (get-name ast)
       (match ast
-	[(or `(var ,x) `(reg ,x)) x]
-	[`(deref rbp ,n) n]
+	[(or (Var x) (Reg x)) x]
+	[(Deref 'rbp n) n]
 	[else
 	 (error 'interp-R1-class/get-name "doesn't have a name: ~a" ast)]))
 
@@ -194,11 +191,11 @@
       (lambda (ast)
 	(vomit "interp-x86-exp" ast)
 	(match ast
-	   [(or `(var ,x) `(reg ,x))
+	   [(or (Var x) (Reg x))
 	    (lookup (get-name ast) env)]
-	   [`(deref ,r ,n)
+	   [(Deref r n)
 	    (lookup (get-name ast) env)]
-	   [`(int ,n) n]
+	   [(Imm n) n]
 	   [else
 	    (error 'interp-R1-class/interp-x86-exp "unhandled ~a" ast)])))
 
@@ -208,27 +205,27 @@
           (vomit "R1/interp-x86-instr" (car ast)))
         (match ast
 	   ['() env]
-	   [`((callq read_int) . ,ss)
+	   [(cons (Callq 'read_int) ss)
 	    ((interp-x86-instr (cons (cons 'rax (read)) env)) ss)]
-           [`((movq ,s ,d) . ,ss)
+           [(cons (Instr 'movq (list s d)) ss)
             (define x (get-name d))
 	    (define v ((interp-x86-exp env) s))
 	    ((interp-x86-instr (cons (cons x v) env)) ss)]
-           [`((jmp ,conclusion) . ,ss)
+           [(cons (Jmp conclusion) ss)
             #:when (string-suffix? (symbol->string conclusion) "conclusion")
             env]
-           [`((jmp ,label) . ,ss)
+           [(cons (Jmp label) ss)
             ((interp-x86-block env) (goto-label label))]
-	   [`(program ,info ,ss ...)
+	   [(Program info ss)
 	    (let ([env ((interp-x86-instr '()) ss)])
               (lookup 'rax env))]
-	   [`((,binary-op ,s ,d) . ,ss)
+	   [(cons (Instr binary-op (list s d)) ss)
 	    (let ([s ((interp-x86-exp env) s)]
 		  [d ((interp-x86-exp env) d)]
 		  [x (get-name d)]
 		  [f (interp-x86-op binary-op)])
 	      ((interp-x86-instr (cons (cons x (f d s)) env)) ss))]
-	   [`((,unary-op ,d) . ,ss)
+	   [(cons (Instr unary-op (list d)) ss)
 	    (let ([d ((interp-x86-exp env) d)]
 		  [x (get-name d)]
 		  [f (interp-x86-op unary-op)])
@@ -243,7 +240,7 @@
     (define/public (interp-x86-block env)
       (lambda (ast)
         (match ast
-          [`(block ,info ,ss ...)
+          [(Block info ss)
            ((interp-x86-instr env) ss)]
           [else
            (error "R1/interp-x86-block unhandled" ast)])))
@@ -253,9 +250,9 @@
         (when (pair? ast)
           (vomit "R1/interp-x86" (car ast)))
         (match ast
-          [`(program ,info ,CFG)
-           (parameterize ([get-CFG CFG])
-             (define start-block (dict-ref CFG 'start))
+          [(Program info (CFG G))
+           (parameterize ([get-CFG G])
+             (define start-block (dict-ref G 'start))
              (define result-env ((interp-x86-block '()) start-block))
              (lookup 'rax result-env))]
           [else (error "R1/interp-x86 no match in for" ast)]
@@ -316,15 +313,14 @@
         (define recur (interp-scheme-exp env))
 	(verbose "R2/interp-scheme-exp" ast)
 	(match ast
-          [`(has-type ,e ,t) (recur e)]
-          [#t #t]
-          [#f #f]
-          [`(and ,e1 ,e2)
+          [(HasType e t) (recur e)]
+          [(Bool b) b]
+          [(Prim 'and (list e1 e2))
            (match (recur e1)
              [#t (match (recur e2)
                    [#t #t] [#f #f])]
              [#f #f])]
-          [`(if ,cnd ,thn ,els)
+          [(If cnd thn els)
            (match (recur cnd) 
              [#t (recur thn)]
              [#f (recur els)]
@@ -337,9 +333,8 @@
       (lambda (ast)
 	(vomit "R2/interp-C-exp" ast)
 	(match ast
-          [`(has-type ,e ,t) ((interp-C-exp env) e)]
-          [#t #t]
-          [#f #f]
+          [(HasType e t) ((interp-C-exp env) e)]
+          [(Bool b) b]
           [else ((super interp-C-exp env) ast)]
           )))
 
@@ -347,11 +342,11 @@
       (lambda (ast)
 	(vomit "R2/interp-C-tail" ast)
 	(match ast
-          [`(if ,cnd ,thn ,els)
+          [(IfStmt cnd thn els)
            (if ((interp-C-exp env) cnd)
                ((interp-C-tail env) thn)
                ((interp-C-tail env) els))]
-          [`(goto ,label)
+          [(Goto label)
            ((interp-C-tail env) (goto-label label))]
           [else ((super interp-C-tail env) ast)]
           )))
@@ -359,9 +354,9 @@
     (define/override (interp-C ast)
       (vomit "R2/interp-C" ast)
       (match ast
-        [`(program ,info ,CFG)
-         (parameterize ([get-CFG CFG])
-           (super interp-C `(program ,info ,CFG)))]
+        [(Program info (CFG G))
+         (parameterize ([get-CFG G])
+           (super interp-C (Program info (CFG G))))]
         [else (error "R2/interp-C unhandled" ast)]
         ))
 
@@ -376,10 +371,10 @@
 
     (define/override (get-name ast)
       (match ast
-	 [`(byte-reg ,r)
-	  (super get-name `(reg ,(byte2full-reg r)))]
-	 [else (super get-name ast)]))
-
+        [(ByteReg r)
+         (super get-name (Reg (byte2full-reg r)))]
+        [else (super get-name ast)]))
+    
     ;; Extending the set of known operators is essentially the
     ;; same as overriding the interp-x86-op with new functionallity
     (set! x86-ops (hash-set* x86-ops
@@ -391,27 +386,27 @@
       (lambda (ast)
         (vomit "R2/interp-x86-exp" ast)
 	(match ast
-	  [`(byte-reg ,r)
-	   ((interp-x86-exp env) `(reg ,(byte2full-reg r)))]
-	  [#t 1]
-	  [#f 0]
-	  [`(eq? ,e1 ,e2)
+	  [(ByteReg r)
+	   ((interp-x86-exp env) (Reg (byte2full-reg r)))]
+	  [(Bool #t) 1]
+	  [(Bool #f) 0]
+	  [(Prim 'eq? (list e1 e2))
 	   (if (eq? ((interp-x86-exp env) e1)
 		    ((interp-x86-exp env) e2))
 	       1 0)]
-	  [`(< ,e1 ,e2)
+	  [(Prim '< (list e1 e2))
 	   (if (< ((interp-x86-exp env) e1)
 		    ((interp-x86-exp env) e2))
 	       1 0)]
-	  [`(<= ,e1 ,e2)
+	  [(Prim '<= (list e1 e2))
 	   (if (<= ((interp-x86-exp env) e1)
 		    ((interp-x86-exp env) e2))
 	       1 0)]
-	  [`(> ,e1 ,e2)
+	  [(Prim '> (list e1 e2))
 	   (if (> ((interp-x86-exp env) e1)
 		    ((interp-x86-exp env) e2))
 	       1 0)]
-	  [`(>= ,e1 ,e2)
+	  [(Prim '>= (list e1 e2))
 	   (if (>= ((interp-x86-exp env) e1)
 		    ((interp-x86-exp env) e2))
 	       1 0)]
@@ -443,7 +438,7 @@
 	      1 0)]))
 
     (define (eflags-status env cc)
-      (define eflags ((interp-x86-exp env) '(reg __flag)))
+      (define eflags ((interp-x86-exp env) (Reg '__flag)))
       (match cc
 	 ['e (if (equal? eflags 'equal) 1 0)]
 	 ['l (if (equal? eflags 'less) 1 0)]
@@ -463,24 +458,22 @@
         (when (pair? ast)
 	      (vomit "R2/interp-x86-instr" (car ast)))
         (match ast
-          [`(block (lives ,lives) ,ss)
+          [(Block `(lives ,lives) ss)
            ((interp-x86-instr env) ss)]
-          [`((block (lives ,lives) ,ss))
+          [(Block `(lives ,lives) ss)
            ((interp-x86-instr env) ss)]
-          [`((set ,cc ,d) . ,ss)
+          [(cons (Instr 'set (list cc d)) ss)
            (define name (get-name d))
 	   (define val (eflags-status env cc))
 	   (verbose "set" cc val)
            ((interp-x86-instr (cons (cons name val) env)) ss)]
           ;; if's are present before patch-instructions
-          [(or `((if ,cnd ,thn ,els) . ,ss)
-               `((if ,cnd ,thn ,_ ,els ,_) . ,ss))
+          [(cons (IfStmt cnd thn els) ss)
+           ;; todo: add AST node for following?
+           #;(cons (If cnd thn ,_ ,els ,_) . ,ss)
            (if (not (eq? 0 ((interp-x86-exp env) cnd)))
                ((interp-x86-instr env) (append thn ss))
                ((interp-x86-instr env) (append els ss)))]
-
-          [`((label ,l) . ,ss)
-           ((interp-x86-instr env) ss)]
 
           ;; cmpq performs a subq operation and examimines the state
           ;; of the result, this is done without overwriting the second
@@ -500,7 +493,7 @@
                   [eflags (bitwise-ior overflow sign zero)])
              ((interp-x86-instr (cons (cons '__flag eflags) env)) ss))]
           
-          [`((cmpq ,s2 ,s1) . ,ss)
+          [(cons (Instr 'cmpq (list s2 s1)) ss)
            (let* ([v1 ((interp-x86-exp env) s1)]
                   [v2 ((interp-x86-exp env) s2)]
                   [eflags 
@@ -509,11 +502,11 @@
                          [else 'equal])])
              ((interp-x86-instr (cons (cons '__flag eflags) env)) ss))]
 
-          [`((movzbq ,s ,d) . ,ss)
+          [(cons (Instr 'movzbq (list s d)) ss)
            (define x (get-name d))
            (define v ((interp-x86-exp env) s))
            ((interp-x86-instr (cons (cons x v) env)) ss)]
-          [`((jmp-if ,cc ,label) . ,ss)
+          [(cons (JmpIf cc label) ss)
 	   (cond [(eq? (eflags-status env cc) 1)
 		  ((interp-x86-block env) (goto-label label))]
 		 [else ((interp-x86-instr env) ss)])]
@@ -525,11 +518,11 @@
         (when (pair? ast)
 	      (vomit "R2/interp-x86" (car ast)))
         (match ast
-          [`(program ,info ,CFG)
+          [(Program info (CFG G))
            #:when (dict-has-key? info 'type)
            (define ty (lookup 'type info))
            (define new-info (dict-remove info 'type))
-           (display-by-type ty ((interp-x86 env) `(program ,new-info ,CFG)))]
+           (display-by-type ty ((interp-x86 env) (Program new-info (CFG G))))]
           [else ((super interp-x86 env) ast)]
           )))
 
@@ -685,7 +678,7 @@
     (define/override (primitives)
       (set-union (super primitives)
 		 (set 'vector  'vector-ref 'vector-set!
-                      ;; todo: move the following to a different interpreter -Jeremy
+              ;; todo: move the following to a different interpreter -Jeremy
                       'vector-proxy)))
 
     (define/override (interp-op op)
@@ -730,15 +723,15 @@
         (define recur (interp-scheme-exp env))
 	(verbose "R3/interp-scheme" ast)
 	(match ast
-	  [`(void) (void)]
-	  [`(global-value free_ptr)
+	  [(Void) (void)]
+	  [(GlobalValue 'free_ptr)
 	   (unbox free_ptr)]
-	  [`(global-value fromspace_end)
+	  [(GlobalValue 'fromspace_end)
 	   (unbox fromspace_end)]
-          [`(allocate ,l ,ty) (build-vector l (lambda a uninitialized))]
-          [`(allocate-proxy ,ty) (build-vector 3 (lambda a uninitialized))]
-          [`(collect ,size)
-           (unless (exact-nonnegative-integer? (recur size))
+          [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+          [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
+          [(Collect size)
+           (unless (exact-nonnegative-integer? size)
              (error 'interp-C "invalid argument to collect in ~a" ast))
            (void)]
           #;[`(vector-ref ,e-vec ,e-i)
@@ -757,7 +750,7 @@
       (lambda (ast)
 	(verbose "R3/interp-scheme" ast)
 	(match ast
-          [`(program ,info ,e)
+          [(Program info e)
 	   ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
 	   ((interp-scheme-exp '()) e)]
@@ -810,19 +803,19 @@
       (lambda (ast)
         (vomit "R3/interp-C-exp" ast)
         (match ast
-          [`(void) (void)]
-	  [`(global-value free_ptr)
+          [(Void) (void)]
+	  [(GlobalValue 'free_ptr)
 	   (unbox free_ptr)]
-	  [`(global-value fromspace_end)
+	  [(GlobalValue 'fromspace_end)
 	   (unbox fromspace_end)]
-	  [`(collection-needed? ,size)
+	  [(CollectionNeeded? size)
 	   (when (or (eq? (unbox free_ptr) uninitialized)
 		     (eq? (unbox fromspace_end) uninitialized))
 	     (error 'interp-C "uninitialized state in ~a" ast))
 	   #t]
 	  ;; allocate a vector of length l and type t that is initialized.
-	  [`(allocate ,l ,ty) (build-vector l (lambda a uninitialized))]
-	  [`(allocate-proxy ,ty) (build-vector 3 (lambda a uninitialized))]
+	  [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+	  [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           #;[`(vector-ref ,e-vec ,e-i)
            (define vec ((interp-C-exp env) e-vec))
            (define i ((interp-C-exp env) e-i))
@@ -846,11 +839,12 @@
 	  ;; but collection is a no-op so we should check to see if
 	  ;; everything is well formed anyhow.
 	  ;; Collection isn't needed or possible in this representation
-	  [`(collect ,size)
-	   (unless (exact-nonnegative-integer? ((interp-C-exp env) size))
+	  [(Collect size)
+	   (unless (exact-nonnegative-integer? size)
 	     (error 'interp-C "invalid argument to collect in ~a" ast))
 	   env]
-	  [`(collect ,rs ,size)
+          ;; todo: add AST for following
+	  #;[`(collect ,rs ,size)
 	   (unless (and (exact-nonnegative-integer? ((interp-C-exp env) rs))
 			(exact-nonnegative-integer? ((interp-C-exp env) size)))
 	     (error 'interp-C "invalid argument(s) to collect in ~a" ast))
@@ -863,7 +857,7 @@
       (lambda (ast)
         (vomit "R3/interp-C-tail" ast)
         (match ast
-          [`(seq ,s ,t)
+          [(Seq s t)
            (define new-env ((interp-C-stmt env) s))
            ((interp-C-tail new-env) t)]
           [else
@@ -873,10 +867,10 @@
     (define/override (interp-C ast)
       (vomit "R3/interp-C" ast)
       (match ast
-        [`(program ,info ,CFG)
+        [(Program info (CFG G))
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
-         (super interp-C `(program ,info ,CFG))]
+         (super interp-C (Program info (CFG G)))]
         [else
          (error "R3/interp-C unhandled" ast)]
         ))
@@ -885,9 +879,9 @@
       (lambda (ast)
 	(vomit "interp-x86-exp" ast)
 	(match ast
-	  [`(global-value ,label) (fetch-global label)]
-	  [`(deref ,r ,i) #:when (not (eq? r 'rbp))
-	   (define base ((interp-x86-exp env) `(reg ,r)))
+	  [(GlobalValue label) (fetch-global label)]
+	  [(Deref r i) #:when (not (eq? r 'rbp))
+	   (define base ((interp-x86-exp env) (Reg r)))
 	   (define addr (+ base i))
 	   ((memory-read) addr)]
 	  [else ((super interp-x86-exp env) ast)])))
@@ -896,14 +890,14 @@
       (lambda (ast value)
 	(vomit "interp-x86-store" ast value)
 	(match ast
-	  [`(global-value ,label)
+	  [(GlobalValue label)
 	   (define loc (hash-ref global-label-table label
                                  (global-value-err ast)))
 	   (set-box! loc value)
 	   env]
-	  [`(deref ,r ,i)
+	  [(Deref r i)
            #:when (not (eq? r 'rbp))
-	   (define base ((interp-x86-exp env) `(reg ,r)))
+	   (define base ((interp-x86-exp env) (Reg r)))
 	   (define addr (+ base i))
 	   ((memory-write!) addr value)
 	   env]
@@ -924,32 +918,32 @@
         (when (pair? ast)
           (vomit "R3/interp-x86-instr" (car ast)))
 	(match ast
-          [`((callq malloc) . ,ss)
-           (define num-bytes ((interp-x86-exp env) '(reg rdi)))
+          [(cons (Callq 'malloc) ss)
+           (define num-bytes ((interp-x86-exp env) (Reg 'rdi)))
            ((interp-x86-instr
              `((rax . ,(allocate-page! 'malloc num-bytes)) . ,env))
 	    ss)]
-          [`((callq alloc) . ,ss)
-           (define num-bytes ((interp-x86-exp env) '(reg rdi)))
+          [(cons (Callq 'alloc) ss)
+           (define num-bytes ((interp-x86-exp env) (Reg 'rdi)))
            ((interp-x86-instr
              `((rax . ,(allocate-page! 'alloc num-bytes)) . ,env))
 	    ss)]
-          [`((callq collect) . ,ss)
-           (define rootstack ((interp-x86-exp env) '(reg rdi)))
-           (define bytes-requested ((interp-x86-exp env) '(reg rsi)))
+          [(cons (Callq 'collect) ss)
+           (define rootstack ((interp-x86-exp env) (Reg 'rdi)))
+           (define bytes-requested ((interp-x86-exp env) (Reg 'rsi)))
            ((collect!) rootstack bytes-requested)
            ((interp-x86-instr env) ss)]
-          [`((movq ,s ,d) . ,ss)
+          [(cons (Instr 'movq (list s d)) ss)
            (define value   ((interp-x86-exp env) s))
            (define new-env ((interp-x86-store env) d value))
            ((interp-x86-instr new-env) ss)]
-          [`((,(? x86-binary-op? binop) ,s ,d) . ,ss)
+          [(cons (Instr (? x86-binary-op? binop) (list s d)) ss)
            (define src ((interp-x86-exp env) s))
            (define dst ((interp-x86-exp env) d))
            (define op  (interp-x86-op binop))
            (define new-env ((interp-x86-store env) d (op src dst)))
            ((interp-x86-instr new-env) ss)]
-          [`((,(? x86-unary-op? unary-op) ,d) . ,ss)
+          [(cons (Instr (? x86-unary-op? unary-op) (list d)) ss)
            (define dst ((interp-x86-exp env) d))
            (define op  (interp-x86-op unary-op))
            (define new-env ((interp-x86-store env) d (op dst)))
@@ -963,13 +957,13 @@
       (lambda (ast)
         (vomit "R3/interp-pseudo-x86" ast)
 	(match ast
-	  [`(program ,info ,CFG)
+	  [(Program info (CFG G))
            ;(define ty (dict-ref info 'type))
 	    ((initialize!) runtime-config:rootstack-size
 	     runtime-config:heap-size)
 	   (define env (cons (cons 'r15 (unbox rootstack_begin)) '()))
-	   (parameterize ([get-CFG CFG])
-	      (let ([env^ ((interp-x86-block env) (dict-ref CFG 'start))])
+	   (parameterize ([get-CFG G])
+	      (let ([env^ ((interp-x86-block env) (dict-ref G 'start))])
 		(display-by-type 'Integer (lookup 'rax env^))))]
           [else ((super interp-pseudo-x86 env) ast)])))
 
@@ -978,7 +972,7 @@
       (lambda (ast)
         (vomit "R3/interp-x86" ast)
 	(match ast
-	  [`(program ,info ,CFG)
+	  [(Program info (CFG G))
            #:when (dict-has-key? info 'num-spills)
            ;(define ty (dict-ref info 'type))
            (define spills (dict-ref info 'num-spills))
@@ -988,8 +982,8 @@
                           runtime-config:heap-size)
 	   (define env (cons (cons 'r15 (+ root-space (unbox rootstack_begin)))
 			     '()))
-	   (parameterize ([get-CFG CFG])
-	      (let ([env^ ((interp-x86-block env) (dict-ref CFG 'start))])
+	   (parameterize ([get-CFG G])
+	      (let ([env^ ((interp-x86-block env) (dict-ref G 'start))])
 		(display-by-type 'Integer (lookup 'rax env^))))]
           [else
            ((super interp-x86 env) ast)]
@@ -1015,7 +1009,7 @@
 
     (define/public (interp-scheme-def d)
       (match d
-        [`(define (,f [,xs : ,ps] ...) : ,rt ,body)
+        [(Def f (list `[,xs : ,ps] ...) rt info body)
          (mcons f `(lambda ,xs ,body ()))]
         ))
 
@@ -1024,8 +1018,7 @@
 	(verbose "R4/interp-scheme" ast)
         (define recur (interp-scheme-exp env))
 	(match ast
-	  [(or `(app ,fun ,args) `(,fun ,args ...))
-           #:when (not (set-member? (non-apply-ast) fun))
+	  [(Apply fun args)
 	   (define fun-val (recur fun))
 	   (define new-args (for/list ([e args]) (recur e)))
            (apply-fun (lambda (env) (interp-scheme-exp env)) fun-val new-args)]
@@ -1038,7 +1031,7 @@
 	(match ast
 	  #;[`(program (type ,ty) ,ds ... ,body)
 	   ((interp-scheme '()) `(program ,@ds ,body))]
-	  [`(program ,ds ... ,body)
+	  [(Program info (cons ds body))
 	   ((initialize!) runtime-config:rootstack-size
 	    runtime-config:heap-size)
            (let ([top-level (for/list ([d ds]) (interp-scheme-def d))])
@@ -1076,12 +1069,11 @@
 	(define result
 	(match ast
 	  ;; For R4
-	  [(or `(define (,f [,xs : ,ps] ...) : ,rt ,body)
-               `(define (,f [,xs : ,ps] ...) : ,rt ,_ ,body))
+	  [(Def f (list `[,xs : ,ps] ...) rt info body)
 	   (cons f `(lambda ,xs ,body))]
-	  [`(fun-ref ,f)
+	  [(FunRef f)
 	   (lookup f env)]
-	  [`(app ,fun ,args ...)
+	  [(Apply fun args)
 	    (define fun-val ((interp-F env) fun))
 	    (define arg-vals (map (interp-F env) args))
 	    (match fun-val
@@ -1089,57 +1081,46 @@
 		(define new-env (append (map cons xs arg-vals) env))
 		((interp-F new-env) body)]
 	       [else (error "interp-F, expected function, not" fun-val)])]
-	  [`(program ,info ,ds ...)
+	  [(Program info ds)
 	   ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
 	   (let ([top-level (map  (interp-F '()) ds)])
-             ((interp-F top-level) '(app main)))]
+             ((interp-F top-level) (Apply (Var 'main) '())))]
 	  ;; For R3
-	  [`(global-value free_ptr)
+	  [(GlobalValue 'free_ptr)
 	   (unbox free_ptr)]
-	  [`(global-value fromspace_end)
+	  [(GlobalValue 'fromspace_end)
 	   (unbox fromspace_end)]
-	  [`(allocate ,l ,ty) (build-vector l (lambda a uninitialized))]
-	  [`(allocate-proxy ,ty) (build-vector 3 (lambda a uninitialized))]
-	  [`(collect ,size)
+	  [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+	  [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
+	  [(Collect size)
 	   (unless (exact-nonnegative-integer? size)
 	     (error 'interp-F "invalid argument to collect in ~a" ast))
 	   (void)]
-	  [`(void) (void)]
-          #;[`(vector-ref ,e-vec ,e-i)
-           (define vec ((interp-F env) e-vec))
-           (define i ((interp-F env) e-i))
-           (F-vector-ref vec i)]
-          #;[`(vector-set! ,e-vec ,e-i ,e-arg)
-           (define vec ((interp-F env) e-vec))
-           (define i ((interp-F env) e-i))
-           (define arg ((interp-F env) e-arg))
-           (F-vector-set! vec i arg)]
+	  [(Void) (void)]
 	  ;; For R2
-	  [`(has-type ,e ,t) ((interp-F env) e)]
-	  [#t #t]
-	  [#f #f]
-	  [`(and ,e1 ,e2)
+	  [(HasType e t) ((interp-F env) e)]
+	  [(Bool b) b]
+	  [(Prim 'and (list e1 e2))
 	   (match ((interp-F env) e1)
 	     [#t (match ((interp-F env) e2)
 		   [#t #t] [#f #f])]
 	     [#f #f])]
-	  [`(if ,cnd ,thn ,els)
+	  [(If cnd thn els)
 	   (if ((interp-F env) cnd)
 	       ((interp-F env) thn)
 	       ((interp-F env) els))]
 	  ;; For R1
-	  [(? symbol?)
-	   (lookup ast env)]
-	  [(? integer?) ast]
-	  [`(let ([,x ,e]) ,body)
+	  [(Var x)
+	   (lookup x env)]
+	  [(Int n) n]
+	  [(Let x e body)
 	   (let ([v ((interp-F env) e)])
 	     ((interp-F (cons (cons x v) env)) body))]
-	  [`(,op ,args ...)
-           #:when (set-member? (primitives) op)
+	  [(Prim op args)
            (apply (interp-op op) (for/list ([e args]) ((interp-F env) e)))]
-          [`(,f ,args ...)
-           ((interp-F env) `(app ,f ,@args))]
+          [(Apply f args)
+           ((interp-F env) (Apply f args))]
           [else
            (error 'interp-F "R4 unmatched ~a" ast)]
 	  ))
@@ -1151,18 +1132,18 @@
       (lambda (ast)
 	(verbose "R4/interp-C-exp" ast (map fst env))
 	(match ast
-          [`(fun-ref ,f)
+          [(FunRef f)
            (lookup f env)]
-          [`(call ,f ,args ...)
+          [(Call f args)
            (define arg-vals (map (interp-C-exp env) args))
            (define f-val ((interp-C-exp env) f))
            (match f-val
-             [`(lambda (,xs ...) ,info ,CFG ,def-env)
+             [`(lambda (,xs ...) ,info ,G ,def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f 'start))
               (define new-env (append (map cons xs arg-vals) def-env))
-              (parameterize ([get-CFG CFG])
-                ((interp-C-tail new-env) (dict-ref CFG f-start)))]
+              (parameterize ([get-CFG G])
+                ((interp-C-tail new-env) (dict-ref G f-start)))]
              [else (error "interp-C, expected a function, not" f-val)])]
           [else
            ((super interp-C-exp env) ast)]
@@ -1172,16 +1153,16 @@
       (lambda (ast)
 	(verbose "R4/interp-C-tail" ast (map fst env))
 	(match ast
-          [`(tailcall ,f ,args ...)
+          [(TailCall f args)
            (define arg-vals (map (interp-C-exp env) args))
            (define f-val ((interp-C-exp env) f))
            (match f-val
-             [`(lambda (,xs ...) ,info ,CFG ,def-env)
+             [`(lambda (,xs ...) ,info ,G ,def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f 'start))
               (define new-env (append (map cons xs arg-vals) def-env))
-              (parameterize ([get-CFG CFG])
-                ((interp-C-tail new-env) (dict-ref CFG f-start)))]
+              (parameterize ([get-CFG G])
+                ((interp-C-tail new-env) (dict-ref G f-start)))]
              [else (error "interp-C, expected a funnction, not" f-val)])]
           [else
            ((super interp-C-tail env) ast)]
@@ -1190,8 +1171,8 @@
     (define/public (interp-C-def ast)
       (verbose "R4/interp-C-def" ast)
       (match ast
-        [`(define (,f [,xs : ,ps] ...) : ,rt ,info ,CFG)
-         (mcons f `(lambda ,xs ((name . ,f)) ,CFG ()))]
+        [(Def f (list `[,xs : ,ps] ...) rt info G)
+         (mcons f `(lambda ,xs ((name . ,f)) ,G ()))]
         [else
          (error "R4/interp-C-def unhandled" ast)]
         ))
@@ -1199,16 +1180,16 @@
     (define/override (interp-C ast)
       (verbose "R4/interp-C" ast)
       (match ast
-        [`(program ,info ,ds ...)
+        [(Program info ds)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
          (define top-level (for/list ([d ds]) (interp-C-def d)))
          ;; tie the knot
          (for/list ([b top-level])
            (set-mcdr! b (match (mcdr b)
-                          [`(lambda ,xs ,info ,CFG ())
-                           `(lambda ,xs ,info ,CFG ,top-level)])))
-         ((interp-C-tail top-level) '(tailcall main))]
+                          [`(lambda ,xs ,info ,G ())
+                           `(lambda ,xs ,info ,G ,top-level)])))
+         ((interp-C-tail top-level) (TailCall (Var 'main) '()))]
         [else
          (error "R4/interp-C unhandled" ast)]
         ))
@@ -1221,12 +1202,12 @@
 
     (define/override (get-name ast)
       (match ast
-	 [`(stack-arg ,n) (stack-arg-name n)]
+        [(StackArg n) (stack-arg-name n)]
 	 [else (super get-name ast)]))
 
     (define (call-function f-val cont-ss env)
       (match f-val
-	[`(lambda ,info ,CFG ,def-env)
+	[`(lambda ,info ,G ,def-env)
 	 (debug "interp-x86 call-function" f-val)
          (define n (dict-ref info 'num-params))
          (define f (dict-ref info 'name))
@@ -1248,9 +1229,9 @@
                   (cons (cons 'r15 (unbox rootstack_begin)) ;; ??? -Jeremy
                         (append passing-regs def-env))]))
          (define result-env
-           (parameterize ([get-CFG CFG])
+           (parameterize ([get-CFG G])
              ((interp-x86-block new-env)
-              (dict-ref CFG (symbol-append f 'start)))))
+              (dict-ref G (symbol-append f 'start)))))
          (define res (lookup 'rax result-env))
          ((interp-x86-instr (cons (cons 'rax res) env)) cont-ss)]
         [else (error "interp-x86, expected a function, not" f-val)]))
@@ -1259,10 +1240,10 @@
       (lambda (ast)
         (vomit "R4/interp-x86-exp" ast)
 	(match ast
-	   [`(stack-arg ,n)
+	   [(StackArg n)
 	    (define x (stack-arg-name n))
 	    (lookup x env)]
-	   [`(fun-ref ,f)
+	   [(FunRef f)
 	    (lookup f env)]
 	   [else ((super interp-x86-exp env) ast)])))
 
@@ -1301,29 +1282,19 @@
           (vomit "R4/interp-x86-instr" (car ast)))
 	(match ast
           ;; Treat lea like mov -Jeremy
-          [`((leaq ,s ,d) . ,ss)
+          [(cons (Instr 'leaq (list s d)) ss)
            (define x (get-name d))
            (define v ((interp-x86-exp env) s))
            ((interp-x86-instr (cons (cons x v) env)) ss)]
-          [`((indirect-callq ,f) . ,ss)
+          [(cons (IndirectCallq f) ss)
            (debug "indirect callq" ast)
            (define f-val ((interp-x86-exp env) f))
            (call-function f-val ss env)]
-          [`((tail-jmp ,f) . ,ss)
+          [(cons (TailJmp f) ss)
            (debug "tail jmp" ast)
            (define f-val ((interp-x86-exp env) f))
            (call-function f-val '() env)]
-          ;; The following two should be moved elsewhere -Jeremy
-          #;[`((callq vector_ref) . ,ss)
-           (define vec ((interp-x86-exp env) '(reg rdi)))
-           (define i ((interp-x86-exp env) '(reg rsi)))
-           (apply-vector-ref vec i ss env)]
-          #;[`((callq vector_set) . ,ss)
-           (define vec ((interp-x86-exp env) '(reg rdi)))
-           (define i ((interp-x86-exp env) '(reg rsi)))
-           (define val ((interp-x86-exp env) '(reg rdx)))
-           (apply-vector-set! vec i val ss env)]
-          [`((callq ,f) . ,ss) 
+          [(cons (Callq f) ss) 
            #:when (not (set-member? (builtin-funs) f))
            (call-function (lookup f env) ss env)]
           [else
@@ -1332,8 +1303,8 @@
 
     (define/public (interp-x86-def ast)
       (match ast
-        [`(define (,f) ,info ,CFG)
-         (mcons f `(lambda ,(dict-set info 'name f) ,CFG ()))]
+        [(Def f ps rt info G)
+         (mcons f `(lambda ,(dict-set info 'name f) ,G ()))]
         ))
         
     ;; The below applies before register allocation
@@ -1341,7 +1312,7 @@
       (lambda (ast)
         (vomit "R4/interp-pseudo-x86" ast)
 	(match ast
-          [`(program ,info ,ds ...)
+          [(Program info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
             (define top-level (for/list ([d ds]) (interp-x86-def d)))
@@ -1360,7 +1331,7 @@
       (lambda (ast)
         (verbose "R4/interp-x86" ast)
 	(match ast
-          [`(program ,info ,ds ...)
+          [(Program info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (define top-level (for/list ([d ds]) (interp-x86-def d)))
@@ -1399,7 +1370,7 @@
       (lambda (ast)
 	(verbose "R5/interp-scheme" ast)
 	(match ast
-	  [`(lambda: ([,xs : ,Ts] ...) : ,rT ,body)
+	  [(Lambda (list `[,xs : ,Ts] ...) rT body)
 	   `(lambda ,xs ,body ,env)]
 	  [else ((super interp-scheme-exp env) ast)]
           )))
@@ -1409,11 +1380,11 @@
 	(verbose "R5/interp-F" ast)
         (define result
 	(match ast
-	  [`(lambda: ([,xs : ,Ts] ...) : ,rT ,body)
+	  [(Lambda (list `[,xs : ,Ts] ...) rT body)
 	   `(lambda ,xs ,body ,env)]
-	  [`(define (,f [,xs : ,ps] ...) : ,rt ,info ,body)
+	  [(Def f (list `[,xs : ,ps] ...) rt info body)
 	   (mcons f `(lambda ,xs ,body))]
-	  [`(program ,info ,ds ...)
+	  [(Program info ds)
 	   ((initialize!) runtime-config:rootstack-size
 	    runtime-config:heap-size)
 	   (let ([top-level (map (interp-F '()) ds)])
@@ -1422,8 +1393,8 @@
 	       (set-mcdr! b (match (mcdr b)
 			      [`(lambda ,xs ,body)
 			       `(lambda ,xs ,body ,top-level)])))
-	     ((interp-F top-level) '(app main)))]
-	  [`(app ,fun ,args ...)
+	     ((interp-F top-level) (Apply (Var 'main) '())))]
+	  [(Apply fun args)
 	   (define fun-val ((interp-F env) fun))
 	   (define arg-vals (map (interp-F env) args))
            (apply-fun (lambda (env) (interp-F env)) fun-val arg-vals)]
@@ -1511,9 +1482,9 @@
 	(verbose "R6/interp-scheme" ast)
 	(define recur (interp-scheme-exp env))
 	(match ast
-	  [`(inject ,e ,t)
+	  [(Inject e t)
 	   `(tagged ,(recur e) ,t)]
-	  [`(project ,e ,t2)
+	  [(Project e t2)
            (define v (recur e))
 	   (match v
 	      [`(tagged ,v1 ,t1)
@@ -1530,19 +1501,19 @@
 	(define recur (interp-F env))
         (define result
 	(match ast
-	  [`(inject ,e ,t)
+	  [(Inject e t)
 	   `(tagged ,(recur e) ,t)]
-	  [`(project ,e ,t2)
+	  [(Project e t2)
            (define v (recur e))
 	   (match v
 	      [`(tagged ,v1 ,t1)
 	       (cond [(tyeq? t1 t2) v1]
 		     [else (error "in project, type mismatch" t1 t2)])]
 	      [else (error "in project, expected injected value" v)])]
-          [`(value-of-any ,e ,ty)
+          [(ValueOf e ty)
            (define v ((interp-F env) e))
            ((interp-op 'value-of-any) v)]
-          [`(tag-of-any ,e)
+          [(TagOf e)
            (define v ((interp-F env) e))
            (match v
              [`(tagged ,v^ ,ty)
@@ -1550,18 +1521,17 @@
              [else
               (error "interp expected tagged value, not" v)])]
           ;; The following belong in a new R7 interp class -Jeremy
-	  [`(define (,f ,xs ...) ,info ,body)
+	  [(Def f xs _ info body)
 	   (mcons f `(lambda ,xs ,body))]
-	  [`(fun-ref ,f ,n)
+	  [(FunRefArity f n)
 	   (lookup f env)]
-	  [`(lambda (,xs ...) ,body)
+	  [(Lambda xs _ body)
 	   `(lambda ,xs ,body ,env)]
-          [`(and ,e1 ,e2)
+          [(Prim 'and (list e1 e2))
            (if ((interp-F env) e1)
                ((interp-F env) e2)
                #f)]
-	  [`(,op ,args ...)
-           #:when (set-member? (primitives) op)
+	  [(Prim op args)
            (apply (interp-op op) (map (interp-F env) args))]
 	  [else ((super interp-F env) ast)]
 	  ))
@@ -1572,9 +1542,9 @@
       (lambda (ast)
 	(verbose "R6/interp-C-exp" ast)
 	(match ast
-	  [`(inject ,e ,t)
+	  [(Inject e t)
 	   `(tagged ,((interp-C-exp env) e) ,t)]
-	  [`(project ,e ,t2)
+	  [(Project e t2)
 	   (define v ((interp-C-exp env) e))
 	   (match v
 	      [`(tagged ,v1 ,t1)
@@ -1584,8 +1554,8 @@
 		      (error "in project, type mismatch" t1 t2)])]
 	      [else
 	       (error "in project, expected injected value" v)])]
-          [`(value-of-any ,(app (interp-C-exp env) v) ,ty)
-           ((interp-op 'value-of-any) v)]
+          [(ValueOf e ty)
+           ((interp-op 'value-of-any) ((interp-C-exp env) e))]
 	  [else
 	   ((super interp-C-exp env) ast)]
 	  )))
