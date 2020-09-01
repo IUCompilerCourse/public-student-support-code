@@ -61,35 +61,55 @@ Changelog:
          make-lets dict-set-all dict-remove-all goto-label get-CFG 
          symbol-append any-tag parse-program
          
-         (struct-out Prim) (struct-out Var)
-         (struct-out Int) (struct-out Let)
-         (struct-out Program) (struct-out ProgramDefs)
-         (struct-out Bool) (struct-out If)
-         (struct-out HasType)
+         (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
+         (contract-out [struct Var ((name symbol?))])
+         (contract-out [struct Int ((value fixnum?))])
+         (contract-out [struct Let ((var symbol?) (rhs exp?) (body exp?))])
+         (struct-out Program)
+         (struct-out ProgramDefs)
+         (contract-out [struct Bool ((value boolean?))])
+         (contract-out [struct If ((cnd exp?) (thn exp?) (els exp?))])
+         (contract-out [struct HasType ((expr exp?) (type type?))])
          (struct-out Void)
-         (struct-out Apply)
-         (struct-out Def)
-         (struct-out Lambda)
-         (struct-out FunRef) (struct-out FunRefArity)
-         (struct-out Inject) (struct-out Project)
-         (struct-out ValueOf) (struct-out TagOf)
+         (contract-out [struct Apply ((fun exp?) (arg* exp-list?))])
+         (contract-out [struct Def ((name symbol?) (param* param-list?) (rty type?) (info any?)
+                                    (body any?))])
+         (contract-out [struct Lambda ((param* param-list?) (rty type?) (body exp?))])
+         (contract-out [struct FunRef ((name symbol?))])
+         (contract-out [struct FunRefArity ((name symbol?) (arity fixnum?))])
+         (struct-out Inject)
+         (struct-out Project)
+         (struct-out ValueOf)
+         (struct-out TagOf)
            
-         (struct-out Assign) (struct-out Seq) (struct-out Return)
-         (struct-out IfStmt)
-         (struct-out Goto) (struct-out Collect) (struct-out CollectionNeeded?)
+         (contract-out [struct Assign ((lhs lhs?) (rhs exp?))])
+         (contract-out [struct Seq ((fst stmt?) (snd tail?))])
+         (contract-out [struct Return ((arg exp?))])
+         (contract-out [struct IfStmt ((cnd cmp?) (thn goto?) (els goto?))])
+         (contract-out [struct Goto ((label symbol?))])
+         (struct-out Collect)
+         (struct-out CollectionNeeded?)
          (struct-out GlobalValue)
-         (struct-out Allocate) (struct-out AllocateProxy)
-         (struct-out Call) (struct-out TailCall)
+         (struct-out Allocate)
+         (struct-out AllocateProxy)
+         (contract-out [struct Call ((fun exp?) (arg* exp-list?))])
+         (contract-out [struct TailCall ((fun exp?) (arg* exp-list?))])
          (struct-out CFG)
          
-         (struct-out Imm) (struct-out Reg) (struct-out Deref)
-         (struct-out Instr) (struct-out Callq) (struct-out IndirectCallq)
+         (contract-out [struct Imm ((value fixnum?))])
+         (contract-out [struct Reg ((name symbol?))])
+         (contract-out [struct Deref ((reg symbol?) (offset fixnum?))])
+         (contract-out [struct Instr ((name symbol?) (arg* arg-list?))])
+         (contract-out [struct Callq ((target symbol?))])
+         (contract-out [struct IndirectCallq ((target arg?))])
          (struct-out Retq)
-         (struct-out Jmp) (struct-out TailJmp)
-         (struct-out Block)
+         (contract-out [struct Jmp ((target symbol?))])
+         (contract-out [struct TailJmp ((target arg?))])
+         (contract-out [struct Block ((info any?) (instr* instr-list?))])
          (struct-out StackArg)
 
-         (struct-out JmpIf) (struct-out ByteReg)
+         (contract-out [struct JmpIf ((cnd symbol?) (target symbol?))])
+         (contract-out [struct ByteReg ((name symbol?))])
          )
 
 ;; debug state is a nonnegative integer.
@@ -733,7 +753,7 @@ Changelog:
             (recur instr port))
           ])))])
 
-(struct StackArg (number) #:transparent)
+(struct StackArg (number) #:transparent) ;; no longer needed? -Jeremy
 
 (struct ByteReg (name)
   #:methods gen:custom-write
@@ -756,6 +776,121 @@ Changelog:
           (newline-and-indent port col))
         ]))])
   
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; predicates for contracts on structs
+
+(define (any? e) #t)
+
+(define (param-list? ps)
+  (or (null? ps)
+      (and (param? (car ps))
+           (param-list? (cdr ps)))))
+
+(define (param? p)
+  (match p
+    [`(,x : ,t) (and (symbol? x) (type? t))]
+    [else #f]))
+
+(define (exp-list? es)
+  (or (null? es)
+      (and (exp? (car es))
+           (exp-list? (cdr es)))))
+
+(define (exp? e)
+  (match e
+    [(Var x) #t]
+    [(Int n) #t]
+    [(Bool b) #t]
+    [(Void) #t]
+    [(Let x rhs body) #t]
+    [(Lambda ps rt body) #t]
+    [(Prim op es) #t]
+    [(Apply e es) #t]
+    [(GlobalValue n) #t]
+    [(Allocate n t) #t]
+    [(If cnd thn els) #t]
+    [(HasType e t) #t]
+    [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
+    [(Apply e e*) #t]
+    [(FunRef f) #t]
+    [(Call f e*) #t]
+    [else #f]))
+
+(define (type? t)
+  (match t
+    [`(Vector ,ts ...) #t]
+    ['Integer #t]
+    ['Boolean #t]
+    ['Void #t]
+    [`(,ts ... -> ,t) #t]
+    ['() #t] ;; for when a type is not specified
+    ['_ #t]  ;; also for when a type is not specified
+    [else #f]))
+
+(define (lhs? v)
+  (match v
+    [(Var x) #t]
+    [(Reg r) #t]
+    [else #f]))
+
+(define (stmt? s)
+  (match s
+    [(Assign x e) #t]
+    [(Collect n) #t]
+    [else #f]))
+
+(define (tail? t)
+  (match t
+    [(Return e) #t]
+    [(Seq s t) #t]
+    [(Goto l) #t]
+    [(IfStmt cnd els thn) #t]
+    [(TailCall f arg*) #t]
+    [else #f]))
+
+(define (goto? s)
+  (match s
+    [(Goto l) #t]
+    [else #f]))
+
+(define (cmp? e)
+  (match e
+    [(Prim cmp (list arg1 arg2)) #t] ;; should also check cmp -Jeremy
+    [else #f]))
+
+(define (arg? arg)
+  (match arg
+    [(Imm n) #t]
+    [(Var x) #t]
+    [(Reg r) #t]
+    [(Deref r n) #t]
+    [(ByteReg r) #t]
+    [(? symbol?) #t] ;; for condition code in set instruction
+    [(GlobalValue name) #t]
+    [(FunRef f) #t]
+    [else #f]))
+
+(define (arg-list? es)
+  (or (null? es)
+      (and (arg? (car es))
+           (arg-list? (cdr es)))))
+
+(define (instr? ins)
+  (match ins
+    [(Instr n arg*) #t]
+    [(Callq t) #t]
+    [(IndirectCallq a) #t]
+    [(Jmp t) #t]
+    [(TailJmp t) #t]
+    [(JmpIf c t) #t]
+    [else #f]
+    ))
+
+(define (instr-list? es)
+  (or (null? es)
+      (and (instr? (car es))
+           (instr-list? (cdr es)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsing S-expressions into Abstract Syntax Trees (and back)
 
