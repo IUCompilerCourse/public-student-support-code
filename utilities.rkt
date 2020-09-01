@@ -235,6 +235,33 @@ Changelog:
             (recur tail port)
             (newline port))])))])
 
+(define (print-info info port mode)
+  (let ([recur (make-recur port mode)])
+    (for ([(label data) (in-dict info)])
+      (match label
+        ['locals
+         (write-string "locals:" port)
+         (newline port)
+         (cond [(dict? data)
+                (write-string "    " port)
+                (for ([(var type) (in-dict data)])
+                  (write-string (symbol->string var) port)
+                  (write-string " : " port)
+                  (recur type port)
+                  (write-string ", " port)
+                  )
+                (newline port)]
+               [else
+                (recur data port)
+                (newline port)])]
+        [else
+         (write-string (symbol->string label) port)
+         (write-string ":" port)
+         (newline port)
+         (recur data port)
+         (newline port)
+         ]))))
+
 (struct Program (info body) #:transparent
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
@@ -243,6 +270,7 @@ Changelog:
          [(Program info body)
           (write-string "program:" port)
           (newline port)
+          (print-info info port mode)
           (cond [(list? body)
                  (for ([def body])
                    (recur def port)
