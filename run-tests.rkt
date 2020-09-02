@@ -6,6 +6,7 @@
 (require "interp.rkt")
 (require "compiler.rkt")
 ;; (debug-level 1)
+;; (AST-output-syntax 'abstract-syntax)
 
 ;; Define the passes to be used by interp-tests and the grader
 ;; Note that your compiler file (or whatever file provides your passes)
