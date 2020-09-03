@@ -204,89 +204,16 @@ Changelog:
     [else (lambda (p port) (print p port mode))]
     ))
 
-;; The following is a hacked version of the
-;; make-constructor-style-printer from Racket's standard library so
-;; that it doesn't use the #<...> notation in not-0 mode.  -Jeremy
-
-(define (make-constr-style-printer get-constructor get-contents)
-  (lambda (obj port mode)
-    (define (recur x p)
-      (case mode
-        ((#t) (write x p))
-        ((#f) (display x p))
-        ((0 1) (print x p mode))))
-
-    ;; Only two cases: 0 vs everything else
-    (define (print-prefix p)
-      (let ([prefix "("
-             #;(case mode
-               ((0) "(")
-               (else "#<"))]
-            [constructor
-             (get-constructor obj)]
-            [post-constr ""
-             #;(case mode
-               ((0) "")
-               (else ":"))])
-        (write-string prefix p)
-        (display constructor p)
-        (write-string post-constr p)))
-
-    (define (print-suffix p)
-      (let ([suffix ")"
-             #;(case mode
-               ((0) ")")
-               (else ">"))])
-        (write-string suffix p)))
-
-    (define (print-contents p leading-space)
-      (let ([lead (if leading-space (make-string (add1 leading-space) #\space) " ")])
-        (for ([elt (get-contents obj)]) ;; note: generic sequence
-          (when leading-space
-            (pretty-print-newline p (pretty-print-columns)))
-          (write-string lead p)
-          (recur elt p))))
-
-    (define (print/one-line p)
-      (print-prefix p)
-      (print-contents p #f)
-      (print-suffix p))
-
-    (define (print/multi-line p)
-      (let-values ([(line col pos) (port-next-location p)])
-        (print-prefix p)
-        (print-contents p col)
-        (print-suffix p)))
-
-    (cond [(and (pretty-printing)
-                (integer? (pretty-print-columns)))
-           ((let/ec esc
-              (letrec ([tport
-                        (make-tentative-pretty-print-output-port
-                         port
-                         (- (pretty-print-columns) 1)
-                         (lambda () 
-                           (esc
-                            (lambda ()
-                              (tentative-pretty-print-port-cancel tport)
-                              (print/multi-line port)))))])
-                (print/one-line tport)
-                (tentative-pretty-print-port-transfer tport port))
-              void))]
-          [else
-           (print/one-line port)])
-    (void)))
-
 (define (newline-and-indent port col)
   (let ([lead (if col (make-string col #\space) "")])
     (newline port)
     (write-string lead port)
     ))
 
-(struct Var (name) #:transparent
+(struct Var (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Var)
                  (lambda (obj) (list (Var-name obj))))])
        (lambda (ast port mode)
@@ -294,15 +221,15 @@ Changelog:
                 (let ([recur (make-recur port mode)])
                   (match ast
                     [(Var x)
-                     (recur x port)]))]
+                     (write-string (symbol->string x) port)]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]
                ))))])
        
-(struct Int (value) #:transparent
+(struct Int (value) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Int)
                  (lambda (obj) (list (Int-value obj))))])
        (lambda  (ast port mode)
@@ -315,10 +242,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Prim (op arg*) #:transparent
+(struct Prim (op arg*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Prim)
                  (lambda (obj) (list (Prim-op obj) (Prim-arg* obj))))])
        (lambda (ast port mode)
@@ -336,10 +263,10 @@ Changelog:
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]))))])
 
-(struct Let (var rhs body) #:transparent
+(struct Let (var rhs body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Let)
                  (lambda (obj) (list (Let-var obj) (Let-rhs obj)
                                      (Let-body obj))))])
@@ -364,10 +291,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct CFG (block*) #:transparent
+(struct CFG (block*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'CFG)
                  (lambda (obj) (list (CFG-block* obj))))])
        (lambda (ast port mode)
@@ -376,7 +303,7 @@ Changelog:
                   (match ast
                     [(CFG G)
                      (for/list ([(label tail) (in-dict G)])
-                       (recur label port)
+                       (write-string (symbol->string label) port)
                        (write-string ":" port)
                        (newline port)
                        (write-string "    " port)
@@ -413,10 +340,10 @@ Changelog:
          (newline port)
          ]))))
 
-(struct Program (info body) #:transparent
+(struct Program (info body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Program)
                  (lambda (obj) (list (Program-info obj) (Program-body obj))))])
        (lambda (ast port mode)
@@ -437,10 +364,10 @@ Changelog:
                 (csp ast port mode)]
                 ))))])
 
-(struct ProgramDefs (info def* body) #:transparent
+(struct ProgramDefs (info def* body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'ProgramDefs)
                  (lambda (obj) (list (ProgramDefs-info obj)
                                      (ProgramDefs-def* obj)
@@ -462,10 +389,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
   
-(struct Bool (value) #:transparent
+(struct Bool (value) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Bool)
                  (lambda (obj) (list (Bool-value obj))))])
        (lambda (ast port mode)
@@ -478,10 +405,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct If (cnd thn els) #:transparent
+(struct If (cnd thn els) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'If)
                  (lambda (obj) (list (If-cnd obj) (If-thn obj) (If-els obj))))])
        (lambda (ast port mode)
@@ -505,10 +432,10 @@ Changelog:
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]))))])
 
-(struct IfStmt (cnd thn els) #:transparent
+(struct IfStmt (cnd thn els) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'IfStmt)
                  (lambda (obj) (list (IfStmt-cnd obj) (IfStmt-thn obj)
                                      (IfStmt-els obj))))])
@@ -534,10 +461,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Void () #:transparent
+(struct Void () #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Void)
                  (lambda (obj) (list)))])
        (lambda (ast port mode)
@@ -549,10 +476,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Apply (fun arg*) #:transparent
+(struct Apply (fun arg*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Apply)
                  (lambda (obj) (list (Apply-fun obj) (Apply-arg* obj))))])
        (lambda (ast port mode)
@@ -602,10 +529,10 @@ Changelog:
        (write-type t port)
        (write-string "]" port)])))
 
-(struct Def (name param* rty info body) #:transparent
+(struct Def (name param* rty info body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Def)
                  (lambda (obj) (list (Def-name obj) (Def-param* obj)
                                      (Def-rty obj) (Def-info obj)
@@ -649,10 +576,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Lambda (param* rty body) #:transparent
+(struct Lambda (param* rty body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Lambda)
                  (lambda (obj) (list (Lambda-param* obj) (Lambda-rty obj)
                                      (Lambda-body obj))))])
@@ -678,15 +605,15 @@ Changelog:
                 (csp ast port mode)]
                ))))])
   
-(struct Inject (value type) #:transparent)
-(struct ValueOf (value type) #:transparent)
-(struct TagOf (value) #:transparent)
-(struct Project (value type)  #:transparent)
+(struct Inject (value type) #:transparent #:property prop:custom-print-quotable 'never)
+(struct ValueOf (value type) #:transparent #:property prop:custom-print-quotable 'never)
+(struct TagOf (value) #:transparent #:property prop:custom-print-quotable 'never)
+(struct Project (value type)  #:transparent #:property prop:custom-print-quotable 'never)
   
-(struct FunRef (name) #:transparent
+(struct FunRef (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
              (lambda (obj) 'FunRef)
              (lambda (obj) (list (FunRef-name obj))))])
        (lambda (ast port mode)
@@ -699,10 +626,10 @@ Changelog:
             (csp ast port mode)]
            ))))])
            
-(struct FunRefArity (name arity) #:transparent
+(struct FunRefArity (name arity) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'FunRefArity)
                  (lambda (obj) (list (FunRefArity-name obj)
                                      (FunRefArity-arity obj))))])
@@ -720,10 +647,10 @@ Changelog:
             (csp ast port mode)]
            ))))])
 
-(struct Assign (lhs rhs) #:transparent
+(struct Assign (lhs rhs) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Assign)
                  (lambda (obj) (list (Assign-lhs obj) (Assign-rhs obj))))])
        (lambda (ast port mode)
@@ -742,10 +669,10 @@ Changelog:
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]))))])
 
-(struct Seq (fst snd) #:transparent
+(struct Seq (fst snd) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
              (lambda (obj) 'Seq)
              (lambda (obj) (list (Seq-fst obj) (Seq-snd obj))))])
        (lambda (ast port mode)
@@ -762,10 +689,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
            
-(struct Return (arg) #:transparent
+(struct Return (arg) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Return)
                  (lambda (obj) (list (Return-arg obj))))])
        (lambda (ast port mode)
@@ -784,10 +711,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
            
-(struct Goto (label) #:transparent
+(struct Goto (label) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Goto)
                  (lambda (obj) (list (Goto-label obj))))])
        (lambda (ast port mode)
@@ -805,10 +732,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct HasType (expr type) #:transparent
+(struct HasType (expr type) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'HasType)
                  (lambda (obj) (list (HasType-expr obj) (HasType-type obj))))])
        (lambda (ast port mode)
@@ -822,7 +749,7 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct GlobalValue (name) #:transparent
+(struct GlobalValue (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
@@ -830,7 +757,7 @@ Changelog:
         (write-string (symbol->string name) port)
         ]))])
   
-(struct Collect (size) #:transparent
+(struct Collect (size) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
@@ -842,9 +769,9 @@ Changelog:
           )
         ]))])
   
-(struct CollectionNeeded? (size) #:transparent)
+(struct CollectionNeeded? (size) #:transparent #:property prop:custom-print-quotable 'never)
 
-(struct Allocate (amount type) #:transparent
+(struct Allocate (amount type) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
@@ -858,9 +785,9 @@ Changelog:
           )
         ]))])
 
-(struct AllocateProxy (type) #:transparent)
+(struct AllocateProxy (type) #:transparent #:property prop:custom-print-quotable 'never)
 
-(struct Call (fun arg*) #:transparent
+(struct Call (fun arg*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (let ([recur (make-recur port mode)])
@@ -874,7 +801,7 @@ Changelog:
           (write-string ")" port)
           ])))])
 
-(struct TailCall (fun arg*) #:transparent
+(struct TailCall (fun arg*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (let ([recur (make-recur port mode)])
@@ -888,10 +815,10 @@ Changelog:
           (write-string ")" port)
           ])))])
 
-(struct Imm (value) #:transparent
+(struct Imm (value) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Imm)
                  (lambda (obj) (list (Imm-value obj))))])
        (lambda (ast port mode)
@@ -904,10 +831,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Reg (name) #:transparent
+(struct Reg (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Reg)
                  (lambda (obj) (list (Reg-name obj))))])
        (lambda (ast port mode)
@@ -920,10 +847,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Deref (reg offset) #:transparent
+(struct Deref (reg offset) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Deref)
                  (lambda (obj) (list (Deref-reg obj) (Deref-offset obj))))])
        (lambda (ast port mode)
@@ -940,10 +867,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
                
-(struct Instr (name arg*) #:transparent
+(struct Instr (name arg*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Instr)
                  (lambda (obj) (list (Instr-name obj) (Instr-arg* obj))))])
        (lambda (ast port mode)
@@ -966,10 +893,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Callq (target) #:transparent
+(struct Callq (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Callq)
                  (lambda (obj) (list (Callq-target obj))))])
        (lambda (ast port mode)
@@ -986,10 +913,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Retq () #:transparent
+(struct Retq () #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Retq)
                  (lambda (obj) (list)))])
        (lambda (ast port mode)
@@ -1003,7 +930,7 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct IndirectCallq (target) #:transparent
+(struct IndirectCallq (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (let ([recur (make-recur port mode)])
@@ -1016,10 +943,10 @@ Changelog:
             (recur target port)
             (newline-and-indent port col))])))])
 
-(struct Jmp (target) #:transparent
+(struct Jmp (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Jmp)
                  (lambda (obj) (list (Jmp-target obj))))])
        (lambda (ast port mode)
@@ -1035,10 +962,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
   
-(struct TailJmp (target) #:transparent
+(struct TailJmp (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'TailJmp)
                  (lambda (obj) (list (TailJmp-target obj))))])
        (lambda (ast port mode)
@@ -1054,10 +981,10 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Block (info instr*) #:transparent
+(struct Block (info instr*) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'Block)
                  (lambda (obj) (list (Block-info obj) (Block-instr* obj))))])
        (lambda (ast port mode)
@@ -1072,9 +999,9 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct StackArg (number) #:transparent) ;; no longer needed? -Jeremy
+(struct StackArg (number) #:transparent #:property prop:custom-print-quotable 'never) ;; no longer needed? -Jeremy
 
-(struct ByteReg (name) #:transparent
+(struct ByteReg (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc reg port mode)
      (match reg
@@ -1082,10 +1009,10 @@ Changelog:
         (write-string "%" port)
         (write r port)]))])
 
-(struct JmpIf (cnd target) #:transparent
+(struct JmpIf (cnd target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
-     (let ([csp (make-constr-style-printer
+     (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'JmpIf)
                  (lambda (obj) (list (JmpIf-cnd obj) (JmpIf-target obj))))])
        (lambda (ast port mode)
