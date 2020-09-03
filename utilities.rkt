@@ -447,7 +447,6 @@ Changelog:
                      (let-values ([(line col pos) (port-next-location port)])
                        (write-string "if " port)
                        (recur cnd port)
-                       (write-string " then" port)
                        (newline-and-indent port col)
                        (write-string "   " port) ;; indent 
                        (recur thn port)
@@ -725,7 +724,7 @@ Changelog:
                      (let-values ([(line col pos) (port-next-location port)])
                        (write-string "goto" port)
                        (write-string " " port)
-                       (recur label port)
+                       (write-string (symbol->string label) port)
                        (write-string ";" port)
                        )]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
