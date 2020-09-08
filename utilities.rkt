@@ -1131,6 +1131,7 @@ Changelog:
   (match ins
     [(Instr n arg*) #t]
     [(Callq t) #t]
+    [(Retq) #t]
     [(IndirectCallq a) #t]
     [(Jmp t) #t]
     [(TailJmp t) #t]
@@ -1522,7 +1523,7 @@ Changelog:
     (if (string? res)
 	(string=? res expected)
 	(string=? (number->string res) expected))
-    (equal? (with-input-from-string res read)
+    (equal? (with-input-from-string (number->string res) read)
             (with-input-from-string expected read))))
 
 ;; Use exponential backoff to poll/sleep until a timeout is reached.
@@ -1811,13 +1812,12 @@ Changelog:
 ;; Miscelaneous helper functions
 
 (define (make-lets bs e)
-  (cond [(null? bs) e]
-        [(eq? (caar bs) '_)
-         (Seq (cdr (car bs))
-              (make-lets (cdr bs) e))]
-        [else
-         (Let (car (car bs)) (cdr (car bs))
-              (make-lets (cdr bs) e))]))
+  (match bs
+    [`() e]
+    [`((_ . ,e^) . ,bs^)
+     (Seq e^ (make-lets bs^ e))]
+    [`((,x . ,e^) . ,bs^)
+     (Let x e^ (make-lets bs^ e))]))
 
 (define (dict-remove-all dict keys)
   (for/fold ([d dict]) ([k keys])
