@@ -56,6 +56,7 @@ Changelog:
          print-dot
          use-minimal-set-of-registers!
 	 general-registers num-registers-for-alloc caller-save callee-save
+         caller-save-for-alloc callee-save-for-alloc
 	 arg-registers rootstack-reg register->color color->register
          registers align byte-reg->full-reg print-by-type strip-has-type
          make-lets dict-set-all dict-remove-all goto-label get-CFG 
@@ -193,9 +194,8 @@ Changelog:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Abstract Syntax Tree struct definitions
 
-;(define AST-output-syntax (make-parameter 'abstract-syntax))
-(define AST-output-syntax (make-parameter 'concrete-syntax))
-;; the alternative is 'abstract-syntax
+(define AST-output-syntax (make-parameter 'abstract-syntax))
+;(define AST-output-syntax (make-parameter 'concrete-syntax))
 
 (define (make-recur port mode)
   (case mode
@@ -1523,14 +1523,8 @@ Changelog:
     (if (string? res)
 	(string=? res expected)
 	(string=? (number->string res) expected))
-    (let ([res-str (if (number? res)
-                       (number->string res)
-                       (if (not (string? res))
-                           (error 'utilities-result-check
-                                  (format "res should be either number or string, but it is : ~a" res))
-                           res))])
-      (equal? (with-input-from-string res-str read)
-              (with-input-from-string expected read)))))
+    (equal? (with-input-from-string (number->string res) read)
+            (with-input-from-string expected read))))
 
 ;; Use exponential backoff to poll/sleep until a timeout is reached.
 ;; Takes: a control function as produced by "process".
@@ -1680,6 +1674,7 @@ Changelog:
 ;; We reserve rax and r11 for patching instructions.
 ;; We reserve r15 for the rootstack pointer. 
 (define rootstack-reg 'r15)
+(define reserved-registers (set 'rax 'r11 'r15 'rsp 'rbp))
 ;; There are 11 other general registers
 ;; The ordering here indicates preference in the register allocator.
 ;; We put the caller-saved registers first.
@@ -1694,21 +1689,25 @@ Changelog:
   (if f
       (begin
         ;; need at least 2 arg-registers, see limit-functions -Jeremy
-        ;(set! arg-registers (vector 'rcx 'rdx))
         (set! arg-registers (vector 'rcx 'rdx))
-        ;(set! registers-for-alloc (vector 'rcx 'rdx)))
-        (set! registers-for-alloc (vector 'rbx 'rcx 'rdx)))
+        (set! registers-for-alloc (vector 'rcx 'rdx))
+        ;(set! registers-for-alloc (vector 'rbx 'rcx))
+        )
       (begin
         (set! arg-registers (vector 'rcx 'rdx 'rdi 'rsi 'r8 'r9))
         (set! registers-for-alloc general-registers))))
 
 (use-minimal-set-of-registers! #f)
 
-;; We don't need to include the reserved registers
-;; in the list of caller or callee save registers.
-(define caller-save (set 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10))
-(define callee-save (set 'rbx 'r12 'r13 'r14))
+;; This is the definitive list of all the caller-save and callee-save
+;; registers.
+(define caller-save (set 'rax 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10 'r11))
+(define callee-save (set 'rsp 'rbp 'rbx 'r12 'r13 'r14 'r15))
 
+;; The caller-save and callee-save registers used by the register allcoator.
+(define caller-save-for-alloc (set-subtract caller-save reserved-registers))
+(define callee-save-for-alloc (set-subtract callee-save reserved-registers))
+  
 (define byte-register-table
   (make-immutable-hash
    `((ah . rax) (al . rax)
