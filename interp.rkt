@@ -26,17 +26,33 @@
 
 ;; Interpreters for x86 with names that correspond to the book.
 
+(define interp-pseudo-x86-0
+  (lambda (p)
+    ((send (new interp-R1-class) interp-pseudo-x86 '()) p)))
+
 (define interp-x86-0
   (lambda (p)
     ((send (new interp-R1-class) interp-x86 '()) p)))
+
+(define interp-pseudo-x86-1
+  (lambda (p)
+    ((send (new interp-R2-class) interp-pseudo-x86 '()) p)))
 
 (define interp-x86-1
   (lambda (p)
     ((send (new interp-R2-class) interp-x86 '()) p)))
 
+(define interp-pseudo-x86-2
+  (lambda (p)
+    ((send (new interp-R3-class) interp-pseudo-x86 '()) p)))
+
 (define interp-x86-2
   (lambda (p)
     ((send (new interp-R3-class) interp-x86 '()) p)))
+
+(define interp-pseudo-x86-3
+  (lambda (p)
+    ((send (new interp-R4-class) interp-pseudo-x86 '()) p)))
 
 (define interp-x86-3
   (lambda (p)
