@@ -11,8 +11,38 @@
 ;; passes of the compiler.
 ;; 
 ;; The interpreters for the source languages (R0, R1, ..., R7)
+;; and the C intermediate languages C0 and C1
 ;; are in separate files, e.g., interp-R0.rkt.
 
+;; Interpreters for C2 and C3.
+
+(define interp-C2
+  (lambda (p)
+    (send (new interp-R3-class) interp-C p)))
+  
+(define interp-C3
+  (lambda (p)
+    (send (new interp-R4-class) interp-C p)))
+
+;; Interpreters for x86 with names that correspond to the book.
+
+(define interp-x86-0
+  (lambda (p)
+    ((send (new interp-R1-class) interp-x86 '()) p)))
+
+(define interp-x86-1
+  (lambda (p)
+    ((send (new interp-R2-class) interp-x86 '()) p)))
+
+(define interp-x86-2
+  (lambda (p)
+    ((send (new interp-R3-class) interp-x86 '()) p)))
+
+(define interp-x86-3
+  (lambda (p)
+    ((send (new interp-R4-class) interp-x86 '()) p)))
+
+;; The following interpreters handle the final languages.
 
 (define interp-scheme
   (lambda (p)
@@ -29,6 +59,9 @@
 (define interp-pseudo-x86
   (lambda (p)
     ((send (new interp-R6-class) interp-pseudo-x86 '()) p)))
+
+;; The following interpreter names are obsolete,
+;; remove after Fall 2020. -Jeremy 
 
 (define R1-interp-x86
   (lambda (p)
