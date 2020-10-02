@@ -31,6 +31,6 @@
 
 (define (interp-R1 p)
   (match p
-    [(Program info e) ((interp-exp '()) e)]
+    [(Program '() e) ((interp-exp '()) e)]
     ))
 

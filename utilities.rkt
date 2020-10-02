@@ -108,6 +108,7 @@ Changelog:
          (contract-out [struct TailJmp ((target arg?))])
          (contract-out [struct Block ((info any?) (instr* instr-list?))])
          (struct-out StackArg)
+         (struct-out Global)
 
          (contract-out [struct JmpIf ((cnd symbol?) (target symbol?))])
          (contract-out [struct ByteReg ((name symbol?))])
@@ -750,11 +751,40 @@ Changelog:
 
 (struct GlobalValue (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
-  [(define (write-proc ast port mode)
-     (match ast
-       [(GlobalValue name)
-        (write-string (symbol->string name) port)
-        ]))])
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'GlobalValue)
+                 (lambda (obj) (list (GlobalValue-name obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(GlobalValue name)
+                     (write-string "(global-value " port)
+                     (write-string (symbol->string name) port)
+                     (write-string ")" port)
+                     ]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
+(struct Global (name) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'Global)
+                 (lambda (obj) (list (Global-name obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(Global name)
+                     (write-string (symbol->string name) port)
+                     (write-string "(%rip)" port)
+                     ]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
   
 (struct Collect (size) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
@@ -764,7 +794,7 @@ Changelog:
         (let-values ([(line col pos) (port-next-location port)])
           (write-string "(collect " port)
           (write size port)
-          (write-string ");" port)
+          (write-string ")" port)
           )
         ]))])
   
@@ -1119,6 +1149,7 @@ Changelog:
     [(ByteReg r) #t]
     [(? symbol?) #t] ;; for condition code in set instruction
     [(GlobalValue name) #t]
+    [(Global name) #t]
     [(FunRef f) #t]
     [else #f]))
 
@@ -1681,6 +1712,11 @@ Changelog:
 (define general-registers (vector 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10
                                   'rbx  'r12 'r13 'r14))
 
+;; This is the definitive list of all the caller-save and callee-save
+;; registers.
+(define caller-save (set 'rax 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10 'r11))
+(define callee-save (set 'rsp 'rbp 'rbx 'r12 'r13 'r14 'r15))
+
 (define arg-registers (void))
 (define registers-for-alloc (void))
 
@@ -1690,8 +1726,8 @@ Changelog:
       (begin
         ;; need at least 2 arg-registers, see limit-functions -Jeremy
         (set! arg-registers (vector 'rcx 'rdx))
-        (set! registers-for-alloc (vector 'rcx 'rdx))
-        ;(set! registers-for-alloc (vector 'rbx 'rcx))
+        ;(set! registers-for-alloc (vector 'rcx 'rdx))
+        (set! registers-for-alloc (vector 'rbx 'rcx))
         )
       (begin
         (set! arg-registers (vector 'rcx 'rdx 'rdi 'rsi 'r8 'r9))
@@ -1699,15 +1735,14 @@ Changelog:
 
 (use-minimal-set-of-registers! #f)
 
-;; This is the definitive list of all the caller-save and callee-save
-;; registers.
-(define caller-save (set 'rax 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10 'r11))
-(define callee-save (set 'rsp 'rbp 'rbx 'r12 'r13 'r14 'r15))
-
 ;; The caller-save and callee-save registers used by the register allcoator.
-(define caller-save-for-alloc (set-subtract caller-save reserved-registers))
-(define callee-save-for-alloc (set-subtract callee-save reserved-registers))
-  
+(define (caller-save-for-alloc)
+  (set-intersect (set-subtract caller-save reserved-registers)
+                 (list->set (vector->list registers-for-alloc))))
+(define (callee-save-for-alloc)
+  (set-intersect (set-subtract callee-save reserved-registers)
+                 (list->set (vector->list registers-for-alloc))))
+
 (define byte-register-table
   (make-immutable-hash
    `((ah . rax) (al . rax)
@@ -1735,15 +1770,19 @@ Changelog:
     (r8 . 5) (r9 . 6) (r10 . 7) (r12 . 8) (r13 . 9)
     (r14 . 10)))
 
-(define reg-colors
-  '((rax . -1) (r11 . -2) (r15 . -3) (rbp . -4) (__flag . -5)))
-
-(for ([r registers-for-alloc]
-      [i (in-naturals)])
-  (set! reg-colors (cons (cons r i) reg-colors)))
-
+;; The following needs to be a function so that it doesn't execute
+;; before the parameter use-minimal-set-of-registers!  gets set by ad
+;; command line flag! -Jeremy
+(define (reg-colors)
+  (define register-colors '((rax . -1) (r11 . -2) (r15 . -3) (rbp . -4)
+                                       (__flag . -5)))
+  (for ([r registers-for-alloc]
+        [i (in-naturals)])
+    (set! register-colors (cons (cons r i) register-colors)))
+  register-colors)
+  
 (define (register->color r)
-  (cond [(assq r reg-colors) => (lambda (p) (cdr p))]
+  (cond [(assq r (reg-colors)) => (lambda (p) (cdr p))]
         [else -1])) ;; for registers not used in register allocator.
   
 ;;  (cdr (assq r reg-colors)))

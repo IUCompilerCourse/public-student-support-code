@@ -8,7 +8,7 @@
 ;;   kept in sync with this code.
 
 (define primitives (set '+ '-  'read
-                        'eq? '< '<= '> '>= 'not))
+                        'eq? '< '<= '> '>= 'not 'or))
 
 (define (interp-op op)
   (match op

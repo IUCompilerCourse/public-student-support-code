@@ -9,7 +9,7 @@
 ;;   kept in sync with this code.
 
 (define primitives (set '+ '- 'read
-			'eq? '< '<= '> '>= 'not
+			'eq? '< '<= '> '>= 'not 'or
 			'vector 'vector-ref 'vector-set!
 			'boolean? 'integer? 'vector? 'procedure?
                         'tag-of-any 'value-of-any 'exit
@@ -49,6 +49,9 @@
     ['- fx-]
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
+    ['or (lambda (v1 v2)
+           (cond [(and (boolean? v1) (boolean? v2))
+                  (or v1 v2)]))]
     ['< (lambda (v1 v2)
 	  (cond [(and (fixnum? v1) (fixnum? v2))
 		 (< v1 v2)]))]
