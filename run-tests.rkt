@@ -3,6 +3,7 @@
 
 (require "utilities.rkt")
 (require "interp-R1.rkt")
+(require "interp-C0.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 ;; (debug-level 1)
