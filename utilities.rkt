@@ -906,9 +906,16 @@ Changelog:
          (cond [(eq? (AST-output-syntax) 'concrete-syntax)
                 (let ([recur (make-recur port mode)])
                   (match ast
+                    [(Instr 'set (list cc arg))
+                     (let-values ([(line col pos) (port-next-location port)])
+                       (write-string "set" port)
+                       (write-string (symbol->string cc) port)
+                       (write-string " " port)
+                       (recur arg port)
+                       (newline-and-indent port col))]
                     [(Instr name arg*)
                      (let-values ([(line col pos) (port-next-location port)])
-                       (write name port)
+                       (write-string (symbol->string name) port)
                        (let ([i 0])
                          (for ([arg arg*])
                            (cond [(not (eq? i 0))
@@ -1093,7 +1100,6 @@ Changelog:
     [(If cnd thn els) #t]
     [(HasType e t) #t]
     [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
-    [(Apply e e*) #t]
     [(FunRef f) #t]
     [(Call f e*) #t]
     [else #f]))
