@@ -67,6 +67,7 @@ Changelog:
          (contract-out [struct Int ((value fixnum?))])
          (contract-out [struct Let ((var symbol?) (rhs exp?) (body exp?))])
          (struct-out Program)
+         (struct-out ProgramDefsExp)
          (struct-out ProgramDefs)
          (contract-out [struct Bool ((value boolean?))])
          (contract-out [struct If ((cnd exp?) (thn exp?) (els exp?))])
@@ -81,7 +82,8 @@ Changelog:
          (struct-out Inject)
          (struct-out Project)
          (struct-out ValueOf)
-         (struct-out TagOf)
+         #;(struct-out TagOf)
+         (struct-out Exit)
            
          (contract-out [struct Assign ((lhs lhs?) (rhs exp?))])
          (contract-out [struct Seq ((fst stmt?) (snd tail?))])
@@ -365,19 +367,19 @@ Changelog:
                 (csp ast port mode)]
                 ))))])
 
-(struct ProgramDefs (info def* body) #:transparent #:property prop:custom-print-quotable 'never
+(struct ProgramDefsExp (info def* body) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
      (let ([csp (make-constructor-style-printer
-                 (lambda (obj) 'ProgramDefs)
-                 (lambda (obj) (list (ProgramDefs-info obj)
-                                     (ProgramDefs-def* obj)
-                                     (ProgramDefs-body obj))))])
+                 (lambda (obj) 'ProgramDefsExp)
+                 (lambda (obj) (list (ProgramDefsExp-info obj)
+                                     (ProgramDefsExp-def* obj)
+                                     (ProgramDefsExp-body obj))))])
        (lambda (ast port mode)
          (cond [(eq? (AST-output-syntax) 'concrete-syntax)
                 (let ([recur (make-recur port mode)])
                   (match ast
-                    [(ProgramDefs info def* body)
+                    [(ProgramDefsExp info def* body)
                      (write-string "functions:" port)
                      (newline port)
                      (for ([def def*]) (recur def port))
@@ -385,6 +387,28 @@ Changelog:
                      (write-string "program:" port)
                      (newline port)
                      (recur body port)
+                     ]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
+(struct ProgramDefs (info def*) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'ProgramDefs)
+                 (lambda (obj) (list (ProgramDefs-info obj)
+                                     (ProgramDefs-def* obj)
+                                     )))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(ProgramDefs info def*)
+                     (write-string "functions:" port)
+                     (newline port)
+                     (for ([def def*]) (recur def port))
+                     (newline port)
                      ]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]
@@ -607,8 +631,9 @@ Changelog:
   
 (struct Inject (value type) #:transparent #:property prop:custom-print-quotable 'never)
 (struct ValueOf (value type) #:transparent #:property prop:custom-print-quotable 'never)
-(struct TagOf (value) #:transparent #:property prop:custom-print-quotable 'never)
+;;(struct TagOf (value) #:transparent #:property prop:custom-print-quotable 'never)
 (struct Project (value type)  #:transparent #:property prop:custom-print-quotable 'never)
+(struct Exit () #:transparent #:property prop:custom-print-quotable 'never)
   
 (struct FunRef (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
@@ -939,11 +964,11 @@ Changelog:
          (cond [(eq? (AST-output-syntax) 'concrete-syntax)
                 (let ([recur (make-recur port mode)])
                   (match ast
-                    [(Callq target)
+                    [(Callq label)
                      (let-values ([(line col pos) (port-next-location port)])
                        (write-string "callq" port)
                        (write-string " " port)
-                       (recur target port)
+                       (write-string (symbol->string label) port)
                        (newline-and-indent port col))]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]
@@ -1102,6 +1127,11 @@ Changelog:
     [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
     [(FunRef f) #t]
     [(Call f e*) #t]
+    [(Inject e t) #t]
+    [(Project e t) #t]
+    [(ValueOf e t) #t]
+    #;[(TagOf e) #t]
+    [(Exit) #t]
     [else #f]))
 
 (define (type? t)
@@ -1113,6 +1143,7 @@ Changelog:
     [`(,ts ... -> ,t) #t]
     ['() #t] ;; for when a type is not specified
     ['_ #t]  ;; also for when a type is not specified
+    ['Any #t]
     [else #f]))
 
 (define (lhs? v)
@@ -1125,6 +1156,7 @@ Changelog:
   (match s
     [(Assign x e) #t]
     [(Collect n) #t]
+    [(Exit) #t]
     [else #f]))
 
 (define (tail? t)
@@ -1186,7 +1218,8 @@ Changelog:
 
 
 (define src-primitives
-  '(read + - eq? < <= > >= and or not vector vector-ref vector-set!))
+  '(read + - eq? < <= > >= and or not vector vector-ref vector-set!
+         boolean? integer? vector? procedure? void?))
 
 (define (parse-exp e)
   (match e
@@ -1198,6 +1231,12 @@ Changelog:
     [`(if ,cnd ,thn ,els) (If (parse-exp cnd) (parse-exp thn) (parse-exp els))]
     [`(lambda: ,ps : ,rt ,body)
      (Lambda ps rt (parse-exp body))]
+    [`(lambda ,ps ,body)
+     (Lambda ps 'Any (parse-exp body))]
+    [`(project ,e ,t)
+     (Project (parse-exp e) t)]
+    [`(inject ,e ,t)
+     (Inject (parse-exp e) t)]
     [`(,op ,es ...)
      #:when (set-member? src-primitives op)
      (Prim op (for/list ([e es]) (parse-exp e)))]
@@ -1216,7 +1255,7 @@ Changelog:
     [`(program ,info ,body)
      (Program info (parse-exp body))]
     [`(program ,info ,def* ... ,body)
-     (ProgramDefs info
+     (ProgramDefsExp info
                   (for/list ([d def*]) (parse-def d))
                   (parse-exp body))]
     ))
