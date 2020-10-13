@@ -92,7 +92,7 @@
 (define (interp-R4 p)
   (verbose "interp-R4" p)
   (match p
-    [(ProgramDefs info ds body)
+    [(ProgramDefsExp info ds body)
      (let ([top-level (for/list ([d ds]) (interp-def d))])
        (for/list ([b top-level])
          (set-mcdr! b (match (mcdr b)
@@ -101,7 +101,7 @@
        ((interp-exp top-level) body))]
     
     ;; For after the shrink pass.
-    [(Program info ds)
+    [(ProgramDefs info ds)
      (let ([top-level (for/list ([d ds]) (interp-def d))])
        (for ([b top-level])
          (set-mcdr! b (match (mcdr b)

@@ -127,50 +127,52 @@
     (verbose "R6/interp-exp" e)
     (let ([ret
            (match e
-             [(? symbol?) (lookup e env)]
-             [`(let ([,x ,e]) ,body)
+             [(Var x) (lookup x env)]
+             [(Let x e body)
               (define new-env (cons (cons x ((interp-exp env) e)) env))
               ((interp-exp new-env) body)]
-             [(? fixnum?) e]
-             [(? boolean?) e]
-             [`(if ,cnd ,thn ,els)
+             [(Int n) n]
+             [(Bool b) b]
+             [(If cnd thn els)
               (define b (recur cnd))
               (match b
                 [#t (recur thn)]
                 [#f (recur els)]
                 [else(error 'inter-exp "R6, expected Boolean condition, not ~a" b)]
                 )]
-             [`(and ,e1 ,e2)
+             [(Prim 'and (list e1 e2))
               (define v1 (recur e1))
               (match v1
                 [#t (match (recur e2) [#t #t] [#f #f])]
                 [#f #f])]
-             [`(has-type ,e ,t)
+             [(HasType e t)
               (recur e)]
-             [`(void) (void)]
-             [`(lambda: ([,xs : ,Ts] ...) : ,rT ,body)
+             [(Void) (void)]
+             [(Lambda `([,xs : ,Ts] ...) rT body)
               `(lambda ,xs ,body ,env)]
-             [`(inject ,e ,t)
+             [(Inject e t)
               (apply-inject ((interp-exp env) e) t)]
-             [`(project ,e ,t2)
+             [(Project e t2)
               (define v (recur e))
               (apply-project v t2)]
-             [`(tag-of-vector ,e)
+             #;[(TagOf e)
               (define v (recur e))
               (match v
-                [`(vector-proxy ,vec ,rs ,ws) 1]
-                [else 0])]
-             [`(value-of-any ,e ,ty)
+                [`(tagged ,v^ ,t) (any-tag t)]
+                [`(vector-proxy ,vec ,rs ,ws) (any-tag '(Vector))]
+                [else (error 'interp-exp "unrecognized value in TagOf: ~a" v)])]
+             [(ValueOf e ty)
               ((interp-op 'value-of-any) (recur e))]
-             [`(,op ,args ...)
-              #:when (set-member? primitives op)
+             [(Prim op args)
               (apply (interp-op op) (map recur args))]
              ;; The following case has to come last. -Jeremy
-             [(or `(app ,fun ,args ...) `(,fun ,args ...))
+             [(Apply fun args)
               (define fun-val ((interp-exp env) fun))
               (define arg-vals (map (interp-exp env) args))
               (apply-fun fun-val arg-vals)]
-             [else (error 'interp-exp "unrecognized expression")]
+             [(Exit)
+              (error 'interp-exp "exiting")] ;; What to do here? -Jeremy
+             [else (error 'interp-exp "unrecognized expression ~a" e)]
              )])
       (verbose "R6/interp-exp ==>" ret)
       ret)))
@@ -178,8 +180,7 @@
 (define (interp-def env)
   (lambda (d)
     (match d
-      [(or `(define (,f [,xs : ,ps] ...) : ,rt ,body)
-           `(define (,f [,xs : ,ps] ...) : ,rt ,_ ,body))
+      [(Def f `([,xs : ,ps] ...) rt info body)
        (mcons f `(lambda ,xs ,body))]
       [else
        (error "R6/interp-def unmatched" d)]
@@ -187,18 +188,18 @@
 
 (define (interp-R6-prog p)
   (match p
-    [`(program ,info ,defs ...)
+    [(ProgramDefs info defs)
     (let ([top-level (map (interp-def '()) defs)])
       (for/list ([b top-level])
         (set-mcdr! b (match (mcdr b)
                        [`(lambda ,xs ,body)
                         `(lambda ,xs ,body ,top-level)])))
-      ((interp-exp top-level) `(main)))]
+      ((interp-exp top-level) (Apply (Var 'main) '())))]
     ))
 
 (define (interp-R6 p)
   (match p
-    [`(program ,info ,defs ... ,body)
+    [(ProgramDefsExp info defs body)
      (let ([top-level (map (interp-def '()) defs)])
        (for/list ([b top-level])
          (set-mcdr! b (match (mcdr b)

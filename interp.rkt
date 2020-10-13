@@ -323,7 +323,7 @@
     ;; -Jeremy
     (define/override (primitives)
       (set-union (super primitives)
-		 (set 'eq? 'not '< '<= '> '>=)))
+		 (set 'eq? 'not 'or '< '<= '> '>=)))
 
     (define/override (interp-op op)
       (match op
@@ -339,6 +339,10 @@
 	 ['not (lambda (v) (match v
                              [#t #f] [#f #t]
                              [else (error 'interp-op "unhandled case")]))]
+         ['or (lambda (v1 v2)
+                (cond [(and (boolean? v1) (boolean? v2))
+                       (or v1 v2)]
+                      [else (error 'interp-op "unhandled case")]))]
 	 ['< (lambda (v1 v2)
 	       (cond [(and (fixnum? v1) (fixnum? v2)) (< v1 v2)]
                      [else (error 'interp-op "unhandled case")]
@@ -928,7 +932,7 @@
       (lambda (ast)
 	(vomit "interp-x86-exp" ast)
 	(match ast
-	  [(GlobalValue label) (fetch-global label)]
+	  [(Global label) (fetch-global label)]
 	  [(Deref r i) #:when (not (eq? r 'rbp))
 	   (define base ((interp-x86-exp env) (Reg r)))
 	   (define addr (+ base i))
@@ -939,7 +943,7 @@
       (lambda (ast value)
 	(vomit "interp-x86-store" ast value)
 	(match ast
-	  [(GlobalValue label)
+	  [(Global label)
 	   (define loc (hash-ref global-label-table label
                                  (global-value-err ast)))
 	   (set-box! loc value)
@@ -1058,7 +1062,7 @@
 
     (define/public (interp-scheme-def d)
       (match d
-        [(Def f (list `[,xs : ,ps] ...) rt info body)
+        [(Def f `([,xs : ,ps] ...) rt info body)
          (mcons f `(lambda ,xs ,body ()))]
         ))
 
@@ -1118,7 +1122,7 @@
 	(define result
 	(match ast
 	  ;; For R4
-	  [(Def f (list `[,xs : ,ps] ...) rt info body)
+	  [(Def f `([,xs : ,ps] ...) rt info body)
 	   (cons f `(lambda ,xs ,body))]
 	  [(FunRef f)
 	   (lookup f env)]
@@ -1130,7 +1134,7 @@
 		(define new-env (append (map cons xs arg-vals) env))
 		((interp-F new-env) body)]
 	       [else (error "interp-F, expected function, not" fun-val)])]
-	  [(Program info ds)
+	  [(ProgramDefs info ds)
 	   ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
 	   (let ([top-level (map  (interp-F '()) ds)])
@@ -1220,7 +1224,7 @@
     (define/public (interp-C-def ast)
       (verbose "R4/interp-C-def" ast)
       (match ast
-        [(Def f (list `[,xs : ,ps] ...) rt info G)
+        [(Def f `([,xs : ,ps] ...) rt info G)
          (mcons f `(lambda ,xs ((name . ,f)) ,G ()))]
         [else
          (error "R4/interp-C-def unhandled" ast)]
@@ -1229,7 +1233,7 @@
     (define/override (interp-C ast)
       (verbose "R4/interp-C" ast)
       (match ast
-        [(Program info ds)
+        [(ProgramDefs info ds)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
          (define top-level (for/list ([d ds]) (interp-C-def d)))
@@ -1361,7 +1365,7 @@
       (lambda (ast)
         (vomit "R4/interp-pseudo-x86" ast)
 	(match ast
-          [(Program info ds)
+          [(ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
             (define top-level (for/list ([d ds]) (interp-x86-def d)))
@@ -1380,7 +1384,7 @@
       (lambda (ast)
         (verbose "R4/interp-x86" ast)
 	(match ast
-          [(Program info ds)
+          [(ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (define top-level (for/list ([d ds]) (interp-x86-def d)))
@@ -1419,7 +1423,7 @@
       (lambda (ast)
 	(verbose "R5/interp-scheme" ast)
 	(match ast
-	  [(Lambda (list `[,xs : ,Ts] ...) rT body)
+	  [(Lambda `([,xs : ,Ts] ...) rT body)
 	   `(lambda ,xs ,body ,env)]
 	  [else ((super interp-scheme-exp env) ast)]
           )))
@@ -1429,11 +1433,11 @@
 	(verbose "R5/interp-F" ast)
         (define result
 	(match ast
-	  [(Lambda (list `[,xs : ,Ts] ...) rT body)
+	  [(Lambda `([,xs : ,Ts] ...) rT body)
 	   `(lambda ,xs ,body ,env)]
-	  [(Def f (list `[,xs : ,ps] ...) rt info body)
+	  [(Def f `([,xs : ,ps] ...) rt info body)
 	   (mcons f `(lambda ,xs ,body))]
-	  [(Program info ds)
+	  [(ProgramDefs info ds)
 	   ((initialize!) runtime-config:rootstack-size
 	    runtime-config:heap-size)
 	   (let ([top-level (map (interp-F '()) ds)])
@@ -1562,20 +1566,20 @@
           [(ValueOf e ty)
            (define v ((interp-F env) e))
            ((interp-op 'value-of-any) v)]
-          [(TagOf e)
+          #;[(TagOf e)
            (define v ((interp-F env) e))
            (match v
              [`(tagged ,v^ ,ty)
               (any-tag ty)]
              [else
               (error "interp expected tagged value, not" v)])]
-          ;; The following belong in a new R7 interp class -Jeremy
-	  [(Def f xs _ info body)
+          ;; The following belongs in a new R7 interp class -Jeremy
+	  #;[(Def f xs _ info body)
 	   (mcons f `(lambda ,xs ,body))]
+	  #;[(Lambda xs _ body)
+	   `(lambda ,xs ,body ,env)]
 	  [(FunRefArity f n)
 	   (lookup f env)]
-	  [(Lambda xs _ body)
-	   `(lambda ,xs ,body ,env)]
           [(Prim 'and (list e1 e2))
            (if ((interp-F env) e1)
                ((interp-F env) e2)
@@ -1584,7 +1588,7 @@
            (apply (interp-op op) (map (interp-F env) args))]
 	  [else ((super interp-F env) ast)]
 	  ))
-        (verbose "r6/interp-F result of" ast result)
+        (verbose "R6/interp-F result of" ast result)
         result))
 
     (define/override (interp-C-exp env)
@@ -1605,6 +1609,8 @@
 	       (error "in project, expected injected value" v)])]
           [(ValueOf e ty)
            ((interp-op 'value-of-any) ((interp-C-exp env) e))]
+          #;[(TagOf e)
+           ((interp-op 'tag-of-any) ((interp-C-exp env) e))]
 	  [else
 	   ((super interp-C-exp env) ast)]
 	  )))
