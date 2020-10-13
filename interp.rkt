@@ -4,7 +4,12 @@
 (provide interp-scheme interp-C interp-x86 interp-pseudo-x86
          R1-interp-x86 R2-interp-x86 R3-interp-x86
          interp-R1-class interp-R2-class interp-R3-class
-	 interp-R4-class interp-R5-class interp-R6-class)
+	 interp-R4-class interp-R5-class interp-R6-class
+         interp-C2 interp-C3
+         interp-pseudo-x86-0 interp-x86-0
+         interp-pseudo-x86-1 interp-x86-1
+         interp-pseudo-x86-2 interp-x86-2
+         interp-pseudo-x86-3 interp-x86-3)
 
 ;; The interpreters in this file are for interpreting
 ;; the intermediate languages produced by the various
