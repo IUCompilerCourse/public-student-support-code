@@ -51,6 +51,12 @@
   (lambda (p)
     ((send (new interp-R3-class) interp-pseudo-x86 '()) p)))
 
+;; The interp-x86-2 interpreter takes a program of the form
+;; (Program info (CFG G))
+;; Also, the info field must be an association list
+;; with a key 'num-spills that maps to a pair (i.e. cons)
+;; containing the number of spills to the regular stack
+;; and the number of spills to the root stack.
 (define interp-x86-2
   (lambda (p)
     ((send (new interp-R3-class) interp-x86 '()) p)))
