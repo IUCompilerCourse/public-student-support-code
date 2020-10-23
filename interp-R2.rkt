@@ -62,7 +62,7 @@
       [(Prim op args)
        (apply (interp-op op) (for/list ([e args]) (recur e)))]
       [else
-       (error 'interp-exp "R2: unmatch" e)]
+       (error 'interp-exp "R2: unmatch ~a" e)]
       )))
 
 (define (interp-R2 p)
