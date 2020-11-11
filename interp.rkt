@@ -1274,6 +1274,8 @@
         [(StackArg n) (stack-arg-name n)]
 	 [else (super get-name ast)]))
 
+    (define root-stack-pointer 0)
+
     (define (call-function f-val cont-ss env)
       (match f-val
 	[`(lambda ,info ,G ,def-env)
@@ -1284,24 +1286,25 @@
 	 ;; copy argument registers over to new-env
 	 (define passing-regs
 	   (filter (lambda (p) p)
-		   (for/list ([r arg-registers])
+		   (for/list ([r (vector-tag arg-registers n)])
                      (let ([v (lookup r env #f)])
                        (if v (cons r v) #f)))))
          (debug "interp-x86 call-function" passing-regs)
-         (define new-env
-           (cond [spills
-                  (define variable-size 8) ;; ugh -Jeremy
-                  (define root-size (* variable-size (cdr spills)))
-                  (cons (cons 'r15 (+ root-size (unbox rootstack_begin)))
-                        (append passing-regs def-env))]
-                 [else
-                  (cons (cons 'r15 (unbox rootstack_begin)) ;; ??? -Jeremy
-                        (append passing-regs def-env))]))
+         (define variable-size 8) ;; ugh -Jeremy
+         (define root-size
+           (cond [spills (* variable-size (cdr spills))]
+                 [else 0]))
+         (set! root-stack-pointer (+ root-stack-pointer root-size))
+         (define new-env (cons (cons 'r15 root-stack-pointer)
+                               (append passing-regs def-env)))
+         ;; interpret the body of the function in the new-env
          (define result-env
            (parameterize ([get-CFG G])
              ((interp-x86-block new-env)
               (dict-ref G (symbol-append f 'start)))))
+         (set! root-stack-pointer (- root-stack-pointer root-size))
          (define res (lookup 'rax result-env))
+         ;; return and continue after the function call, back in env
          ((interp-x86-instr (cons (cons 'rax res) env)) cont-ss)]
         [else (error "interp-x86, expected a function, not" f-val)]))
 
@@ -1384,12 +1387,13 @@
           [(ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
-            (define top-level (for/list ([d ds]) (interp-x86-def d)))
-            ;; tie the knot
-            (for/list ([b top-level])
-              (set-mcdr! b (match (mcdr b)
-                             [`(lambda ,xs ,body ())
-                              `(lambda ,xs ,body ,top-level)])))
+           (set! root-stack-pointer (unbox rootstack_begin))
+           (define top-level (for/list ([d ds]) (interp-x86-def d)))
+           ;; tie the knot
+           (for/list ([b top-level])
+             (set-mcdr! b (match (mcdr b)
+                            [`(lambda ,xs ,body ())
+                             `(lambda ,xs ,body ,top-level)])))
            (define env^ (list (cons 'r15 (unbox rootstack_begin))))
            (define result-env (call-function (lookup 'main top-level) '() env^))
            (display-by-type 'Integer (lookup 'rax result-env))]
@@ -1403,6 +1407,7 @@
           [(ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
+           (set! root-stack-pointer (unbox rootstack_begin))
            (define top-level (for/list ([d ds]) (interp-x86-def d)))
            ;; tie the knot
            (for/list ([b top-level])
