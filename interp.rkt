@@ -1286,7 +1286,7 @@
 	 ;; copy argument registers over to new-env
 	 (define passing-regs
 	   (filter (lambda (p) p)
-		   (for/list ([r (vector-tag arg-registers n)])
+		   (for/list ([r (vector-take arg-registers n)])
                      (let ([v (lookup r env #f)])
                        (if v (cons r v) #f)))))
          (debug "interp-x86 call-function" passing-regs)
