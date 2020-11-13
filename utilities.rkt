@@ -1770,12 +1770,12 @@ Changelog:
   (if f
       (begin
         ;; need at least 2 arg-registers, see limit-functions -Jeremy
-        (set! arg-registers (vector 'rcx 'rdx))
-        ;(set! registers-for-alloc (vector 'rcx 'rdx))
+        (set! arg-registers (vector 'rdi 'rsi))
         (set! registers-for-alloc (vector 'rbx 'rcx))
         )
       (begin
-        (set! arg-registers (vector 'rcx 'rdx 'rdi 'rsi 'r8 'r9))
+        ;; The following ordering is specified in the x86-64 conventions.
+        (set! arg-registers (vector 'rdi 'rsi 'rdx 'rcx 'r8 'r9))
         (set! registers-for-alloc general-registers))))
 
 (use-minimal-set-of-registers! #f)
