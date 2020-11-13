@@ -15,7 +15,7 @@
 ;; in order to get this value use                (rootstack-size)
 ;; in order to set this value to (expt 2 8) use  (rootstack-size (expt 2 8))
 (define rootstack-size
-  (make-parameter (expt 2 13)))
+  (make-parameter (expt 2 16)))
 
 ;; Parameter that determines what the initial heap size of the program is.
 (define heap-size 
