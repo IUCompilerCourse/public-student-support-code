@@ -1355,9 +1355,9 @@
 	(match ast
           ;; Treat lea like mov -Jeremy
           [(cons (Instr 'leaq (list s d)) ss)
-           (define x (get-name d))
-           (define v ((interp-x86-exp env) s))
-           ((interp-x86-instr (cons (cons x v) env)) ss)]
+           (define value   ((interp-x86-exp env) s))
+           (define new-env ((interp-x86-store env) d value))
+           ((interp-x86-instr new-env) ss)]
           [(cons (IndirectCallq f) ss)
            (debug "indirect callq" ast)
            (define f-val ((interp-x86-exp env) f))
