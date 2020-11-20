@@ -1218,7 +1218,9 @@ Changelog:
 
 
 (define src-primitives
-  '(read + - eq? < <= > >= and or not vector vector-ref vector-set!
+  '(read + - eq? < <= > >= and or not
+         vector vector-ref vector-set! vector-length
+         procedure-arity
          boolean? integer? vector? procedure? void?))
 
 (define (parse-exp e)
