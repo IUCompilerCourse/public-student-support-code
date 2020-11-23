@@ -1067,7 +1067,8 @@
   (class interp-R3-class
     (super-new)
     (inherit primitives interp-op initialize! display-by-type
-             return-from-tail interp-x86-block memory-read memory-write!)
+             return-from-tail interp-x86-block memory-read memory-write!
+             interp-x86-store)
 
     (inherit-field result rootstack_begin free_ptr fromspace_end
 		   uninitialized)
