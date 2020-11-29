@@ -84,6 +84,7 @@ Changelog:
          (struct-out ValueOf)
          #;(struct-out TagOf)
          (struct-out Exit)
+         (struct-out Closure)
            
          (contract-out [struct Assign ((lhs lhs?) (rhs exp?))])
          (contract-out [struct Seq ((fst stmt?) (snd tail?))])
@@ -94,6 +95,7 @@ Changelog:
          (struct-out CollectionNeeded?)
          (struct-out GlobalValue)
          (struct-out Allocate)
+         (struct-out AllocateClosure)
          (struct-out AllocateProxy)
          (contract-out [struct Call ((fun exp?) (arg* exp-list?))])
          (contract-out [struct TailCall ((fun exp?) (arg* exp-list?))])
@@ -835,6 +837,22 @@ Changelog:
           (write amount port)
           (write-string " " port)
           (write-type type port)
+          (write-string ")" port)
+          )
+        ]))])
+
+(struct AllocateClosure (amount type arity) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(AllocateClosure len type arity)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "(allocate-closure " port)
+          (write len port)
+          (write-string " " port)
+          (write-type type port)
+          (write-string " " port)
+          (write arity port)
           (write-string ")" port)
           )
         ]))])
