@@ -94,6 +94,11 @@
                                 (recur e)))
        (let ([t `(Vector ,@t*)])
          (values (HasType (Prim 'vector e*) t) t))]
+      [(Closure arity es)
+       (define-values (e* t*) (for/lists (e* t*) ([e es])
+                                (recur e)))
+       (let ([t `(Vector ,@t*)])
+         (values (HasType (Closure arity e*) t) t))]
       [(Prim 'vector-length (list e))
        (define-values (e^ t) (recur e))
        (match t
@@ -142,6 +147,17 @@
                    "type error: different argument types of eq?: ~a != ~a"
                    t1 t2))])
        (values (Prim 'eq? (list e1 e2)) 'Boolean)]
+      [(Prim 'procedure-arity (list e))
+       (define-values (e^ t) (recur e))
+       (match t
+         ;; before closure conversion
+         [`(,ts ... -> ,rt)
+          (values (Prim 'procedure-arity (list e^)) 'Integer)]
+         ;; after closure conversion
+         [`(Vector (,clos ,ts ... -> ,rt))
+          (values (Prim 'procedure-arity (list e^)) 'Integer)]
+         [else (error 'type-check-exp
+                      "expected a function in procedure-arity, not ~a" t)])]
       [(Prim op es)
        (define-values (new-es ts)
          (for/lists (new-es ts) ([e es])
@@ -150,6 +166,8 @@
        (values (Prim op new-es) t-ret)]
       [(HasType (Prim 'vector es) t)
        ((type-check-exp env) (Prim 'vector es))]
+      [(HasType (Closure arity es) t)
+       ((type-check-exp env) (Closure arity es))]
       [(HasType e t)
        (define-values (e^ t^) (recur e))
        (unless (type-equal? t t^)
@@ -159,24 +177,29 @@
        (values (GlobalValue name) 'Integer)]
       [(Allocate size t)
        (values (Allocate size t) t)]
+      [(AllocateClosure size t arity)
+       (values (AllocateClosure size t arity) t)]
       [(Collect size)
        (values (Collect size) 'Void)]
       [(FunRef f)
        (let ([t (dict-ref env f)])
          (values (FunRef f) t))]
+      [(FunRefArity f n)
+       (let ([t (dict-ref env f)])
+         (values (FunRefArity f n) t))]
       [(Apply e es)
        (define-values (e^ es^ rt) (type-check-apply env e es))
        (values (Apply e^ es^) rt)]
       [(Call e es)
        (define-values (e^ es^ rt) (type-check-apply env e es))
        (values (Call e^ es^) rt)]
-      [(Lambda (and bnd `([,xs : ,Ts] ...)) rT body)
+      [(Lambda (and params `([,xs : ,Ts] ...)) rT body)
        (define-values (new-body bodyT) 
          ((type-check-exp (append (map cons xs Ts) env)) body))
        (define ty `(,@Ts -> ,rT))
        (cond
         [(type-equal? rT bodyT)
-         (values (Lambda bnd rT new-body) ty)]
+         (values (Lambda params rT new-body) ty)]
         [else
          (error "function body's type does not match return type" bodyT rT)
          ])]
