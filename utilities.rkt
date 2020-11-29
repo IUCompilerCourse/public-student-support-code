@@ -637,6 +637,28 @@ Changelog:
 (struct Project (value type)  #:transparent #:property prop:custom-print-quotable 'never)
 (struct Exit () #:transparent #:property prop:custom-print-quotable 'never)
   
+(struct Closure (arity fvs)
+  #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+             (lambda (obj) 'Closure)
+             (lambda (obj) (list (Closure-arity obj)(Closure-fvs obj))))])
+       (lambda (ast port mode)
+     (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+              (let ([recur (make-recur port mode)])
+                (match ast
+                  [(Closure arity fvs)
+                   (write-string "(closure " port)
+                   (recur arity port)
+                   (write-string " " port)
+                   (recur fvs port)
+                   (write-string ")" port)
+                   ]))]
+           [(eq? (AST-output-syntax) 'abstract-syntax)
+            (csp ast port mode)]
+           ))))])
+
 (struct FunRef (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
@@ -665,10 +687,12 @@ Changelog:
               (let ([recur (make-recur port mode)])
                 (match ast
                   [(FunRefArity f n)
-                   (recur f port)
-                   (write-string "{" port)
+                   (write-string "(fun-ref-arity" port)
+                   (write-string " " port)
+                   (write-string (symbol->string f) port)
+                   (write-string " " port)
                    (recur n port)
-                   (write-string "}" port)
+                   (write-string ")" port)
                    ]))]
            [(eq? (AST-output-syntax) 'abstract-syntax)
             (csp ast port mode)]
