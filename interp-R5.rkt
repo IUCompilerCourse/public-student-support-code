@@ -45,7 +45,7 @@
     ['vector-set! vector-set!]
     ['procedure-arity (lambda (v)
                        (match v
-                         [`(function (,xs ...) ,body ,lam-env)
+                         [`(lambda (,xs ...) ,body ,lam-env)
                           (length xs)]
                          [else
                           (error 'interp-R6
