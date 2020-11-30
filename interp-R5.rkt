@@ -9,7 +9,8 @@
 
 (define primitives (set '+ '-  'read
                         'eq? '< '<= '> '>= 'not 'or
-                        'vector 'vector-ref 'vector-set!))
+                        'vector 'vector-ref 'vector-set!
+                        'procedure-arity))
 
 (define (interp-op op)
   (match op
@@ -39,8 +40,16 @@
 	   (cond [(and (fixnum? v1) (fixnum? v2))
 		  (>= v1 v2)]))]
     ['vector vector]
+    ['vector-length vector-length]
     ['vector-ref vector-ref]
     ['vector-set! vector-set!]
+    ['procedure-arity (lambda (v)
+                       (match v
+                         [`(function (,xs ...) ,body ,lam-env)
+                          (length xs)]
+                         [else
+                          (error 'interp-R6
+                                 "expected a function, not ~a" v)]))]
     [else (error 'interp-op "unknown operator")]
     ))
 

@@ -798,6 +798,10 @@
 	  [(GlobalValue 'fromspace_end)
 	   (unbox fromspace_end)]
           [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+          [(AllocateClosure l ty arity)
+           (define vec (build-vector (add1 l) (lambda a uninitialized)))
+           (vector-set! vec l `(arity ,arity))
+           vec]
           [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           [(Collect size)
            (unless (exact-nonnegative-integer? size)
@@ -884,6 +888,10 @@
 	   #t]
 	  ;; allocate a vector of length l and type t that is initialized.
 	  [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+          [(AllocateClosure l ty arity)
+           (define vec (build-vector (add1 l) (lambda a uninitialized)))
+           (vector-set! vec l `(arity ,arity))
+           vec]
 	  [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           #;[`(vector-ref ,e-vec ,e-i)
            (define vec ((interp-C-exp env) e-vec))
@@ -1143,6 +1151,8 @@
 	   (cons f `(lambda ,xs ,body))]
 	  [(FunRef f)
 	   (lookup f env)]
+	  [(FunRefArity f n)
+	   (lookup f env)]
 	  [(Apply fun args)
 	    (define fun-val ((interp-F env) fun))
 	    (define arg-vals (map (interp-F env) args))
@@ -1162,6 +1172,10 @@
 	  [(GlobalValue 'fromspace_end)
 	   (unbox fromspace_end)]
 	  [(Allocate l ty) (build-vector l (lambda a uninitialized))]
+	  [(AllocateClosure l ty arity)
+           (define vec (build-vector (add1 l) (lambda a uninitialized)))
+           (vector-set! vec l `(arity ,arity))
+           vec]
 	  [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
 	  [(Collect size)
 	   (unless (exact-nonnegative-integer? size)
@@ -1469,6 +1483,9 @@
 			      [`(lambda ,xs ,body)
 			       `(lambda ,xs ,body ,top-level)])))
 	     ((interp-F top-level) (Apply (Var 'main) '())))]
+          [(Closure arity args)
+	   (define arg-vals (map (interp-F env) args))
+           (apply vector (append arg-vals (list `(arity ,arity))))]
 	  [(Apply fun args)
 	   (define fun-val ((interp-F env) fun))
 	   (define arg-vals (map (interp-F env) args))
