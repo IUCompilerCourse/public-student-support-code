@@ -1465,7 +1465,7 @@
                             (match v
                               [`(lambda (,xs ...) ,body ,lam-env)
                                (length xs)]
-                              [(vector `(function ,ps ,rst ...) vs ...
+                              [(vector `(lambda ,ps ,rst ...) vs ...
                                        `(arity ,n))
                                n]
                               [else
