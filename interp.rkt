@@ -1451,9 +1451,28 @@
     (inherit initialize! return-from-tail)
     (inherit-field result)
 
+    (define/override (primitives)
+      (set-union (super primitives)
+		 (set 'procedure-arity)))
+    
     (define/override (non-apply-ast)
       (set-union (super non-apply-ast)
 		 (set 'global-value 'allocate 'collect)))
+
+    (define/override (interp-op op)
+      (match op
+         ['procedure-arity (lambda (v)
+                            (match v
+                              [`(lambda (,xs ...) ,body ,lam-env)
+                               (length xs)]
+                              [(vector `(function ,ps ,rst ...) vs ...
+                                       `(arity ,n))
+                               n]
+                              [else
+                               (error 'interp-op "expected function, not ~a" v)]
+                              ))]
+	 [else (super interp-op op)]
+	 ))
     
     (define/override (interp-scheme-exp env)
       (lambda (ast)
