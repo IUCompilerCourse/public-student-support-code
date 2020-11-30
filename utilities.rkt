@@ -1164,16 +1164,19 @@ Changelog:
     [(Apply e es) #t]
     [(GlobalValue n) #t]
     [(Allocate n t) #t]
+    [(AllocateClosure n t a) #t]
     [(If cnd thn els) #t]
     [(HasType e t) #t]
     [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
     [(FunRef f) #t]
+    [(FunRefArity f n) #t]
     [(Call f e*) #t]
     [(Inject e t) #t]
     [(Project e t) #t]
     [(ValueOf e t) #t]
     #;[(TagOf e) #t]
     [(Exit) #t]
+    [(Closure arity fvs) #t]
     [else #f]))
 
 (define (type? t)
