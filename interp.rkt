@@ -34,6 +34,10 @@
   (lambda (p)
     (send (new interp-R4-class) interp-C p)))
 
+(define interp-C4
+  (lambda (p)
+    (send (new interp-R5-class) interp-C p)))
+
 ;; Interpreters for x86 with names that correspond to the book.
 
 (define interp-pseudo-x86-0
