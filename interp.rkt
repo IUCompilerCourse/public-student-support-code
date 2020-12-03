@@ -32,7 +32,7 @@
   (lambda (p)
     ((send (new interp-R5-class) interp-F '()) p)))
 
-;; Interpreters for C2 and C3.
+;; Interpreters for C2, C3, and C4.
 
 (define interp-C2
   (lambda (p)
@@ -46,7 +46,7 @@
   (lambda (p)
     (send (new interp-R5-class) interp-C p)))
 
-;; Interpreters for x86 with names that correspond to the book.
+;; Interpreters for various subsets of x86
 
 (define interp-pseudo-x86-0
   (lambda (p)

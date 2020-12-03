@@ -149,7 +149,6 @@
                           (list e^ (Int i^)))
                     t))]
          [(list `(Vectorof ,t) i)
-          ;; No length check? -Jeremy
           (values (Prim 'vector-ref (list e^ i))  t)]
          [else (error "expected a vector in vector-ref, not" t)])]
       [(Prim 'vector-set! (list e-vec e-i e-arg))
