@@ -51,14 +51,15 @@ static inline int64_t get_ptr_bitfield(int64_t tag){
 }
 
 // The following needs to stay in sync with the any-tag function
-// in dynamic-typing.rkt.  -Jeremy
+// in utilities.rkt.  -Jeremy
 #define ANY_TAG_MASK 7
 #define ANY_TAG_LEN 3
+
 #define ANY_TAG_INT 1    // 001
 #define ANY_TAG_BOOL 4   // 100
+#define ANY_TAG_VOID 5   // 101
 #define ANY_TAG_VEC 2    // 010
 #define ANY_TAG_FUN 3    // 011
-#define ANY_TAG_VOID 5   // 101
 #define ANY_TAG_PTR 0 // not an any, a raw pointer
 
 int any_tag(int64_t any) {
@@ -241,14 +242,14 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     for (unsigned char i = 0; i != len; i++){
       if ((isPtrBits >> i) & 1){
         int64_t* ptr = (int64_t*) data[i];
-    if (is_ptr(ptr)) {
-      /*printf("\ti: %d, ptr: %lld, to_ptr: %lld", i,
-         (int64_t)ptr,
-         (int64_t)to_ptr(ptr));*/
-      int64_t* real_ptr = to_ptr(ptr);
-      assert(real_ptr < fromspace_end);
-      assert(real_ptr >= fromspace_begin);
-    }
+	if (is_ptr(ptr)) {
+	  /*printf("\ti: %d, ptr: %lld, to_ptr: %lld", i,
+		 (int64_t)ptr,
+		 (int64_t)to_ptr(ptr));*/
+	  int64_t* real_ptr = to_ptr(ptr);
+	  assert(real_ptr < fromspace_end);
+	  assert(real_ptr >= fromspace_begin);
+	}
       }
     }
   }
@@ -614,4 +615,53 @@ void print_vector(int64_t* vector_ptr)
   }
   printf(")");
 }
+
+
+int64_t proxy_vector_ref(int64_t* vec, int i);
+int64_t proxy_vector_set(int64_t* vec, int i, int64_t arg);
+int64_t proxy_vector_length(int64_t* vec);
+
+int64_t apply_closure(int64_t* clos, int64_t arg) {
+  int64_t(*f)(int64_t*, int64_t);
+  f = (int64_t(*)(int64_t*, int64_t)) clos[1];
+  return f(clos, arg);
+}
+
+int is_vector_proxy(int64_t* vec) {
+  int64_t tag = vec[0];
+  return (1 && (tag >> 57)) == 1;
+}
+
+int64_t proxy_vector_length(int64_t* vec) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    return proxy_vector_length((int64_t*) vec2);
+  } else {
+    return get_length(vec[0]);
+  }
+}
+
+int64_t proxy_vector_ref(int64_t* vec, int i) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    int64_t val = proxy_vector_ref((int64_t*) vec2, i);
+    int64_t* rd = (int64_t*) ((int64_t*) vec[2])[i+1];
+    return apply_closure(rd, val);
+  } else {
+    return vec[i+1];
+  }
+}
+
+int64_t proxy_vector_set(int64_t* vec, int i, int64_t arg) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    int64_t* wr = (int64_t*) ((int64_t*) vec[3])[i+1];
+    int64_t arg2 = apply_closure(wr, arg);
+    return proxy_vector_set((int64_t*) vec2, i, arg2);
+  } else {
+    vec[i+1] = arg;
+    return 0;
+  }
+}
+
 
