@@ -1,10 +1,10 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-R0)
+(provide interp-Rint)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Interpreter for R0: integer arithmetic
+;; Interpreter for Rint: integer arithmetic
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -18,7 +18,7 @@
       [(Prim 'read '())
        (define r (read))
        (cond [(fixnum? r) r]
-             [else (error 'interp-R1 "expected an integer" r)])]
+             [else (error 'interp-exp "expected an integer" r)])]
       [(Prim '- (list e))
        (define v (interp-exp e))
        (fx- 0 v)]
@@ -28,7 +28,7 @@
        (fx+ v1 v2)]
       ))
 
-(define (interp-R0 p)
+(define (interp-Rint p)
   (match p
     [(Program '() e) (interp-exp e)]
     ))
