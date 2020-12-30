@@ -1,14 +1,12 @@
 #lang racket
 (require racket/set racket/stream)
 (require racket/fixnum)
-(require "interp-R0.rkt")
-(require "interp-R1.rkt")
-(require "interp.rkt")
+(require "interp-Rint.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; R0 examples
+;; Rint examples
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; The following compiler pass is just a silly one that doesn't change
@@ -19,13 +17,11 @@
     [(Var x) e]
     [(Prim 'read '()) (Prim 'read '())]
     [(Prim '- (list e1)) (Prim '- (list (flip-exp e1)))]
-    [(Prim '+ (list e1 e2)) (Prim '+ (list (flip-exp e2) (flip-exp e1)))]
-    ))
+    [(Prim '+ (list e1 e2)) (Prim '+ (list (flip-exp e2) (flip-exp e1)))]))
 
-(define (flip-R0 e)
+(define (flip-Rint e)
   (match e
-    [(Program info e) (Program info (flip-exp e))]
-    ))
+    [(Program info e) (Program info (flip-exp e))]))
 
 
 ;; Next we have the partial evaluation pass described in the book.
@@ -47,14 +43,14 @@
     [(Prim '+ (list e1 e2)) (pe-add (pe-exp e1) (pe-exp e2))]
     ))
 
-(define (pe-R0 p)
+(define (pe-Rint p)
   (match p
     [(Program info e) (Program info (pe-exp e))]
     ))
 
 (define (test-pe p)
-  (assert "testing pe-R0"
-     (equal? (interp-R0 p) (interp-R0 (pe-R0 p)))))
+  (assert "testing pe-Rint"
+     (equal? (interp-Rint p) (interp-Rint (pe-Rint p)))))
 
 (test-pe (parse-program `(program () (+ 10 (- (+ 5 3))))))
 (test-pe (parse-program `(program () (+ 1 (+ 3 1)))))
@@ -73,15 +69,12 @@
       [(Let x e body)
        (error "TODO: code goes here (uniquify-exp, let)")]
       [(Prim op es)
-       (Prim op (for/list ([e es]) ((uniquify-exp symtab) e)))]
-      )))
+       (Prim op (for/list ([e es]) ((uniquify-exp symtab) e)))])))
 
 ;; uniquify : R1 -> R1
 (define (uniquify p)
   (match p
-    [(Program info e)
-     (Program info ((uniquify-exp '()) e))]
-    ))
+    [(Program info e) (Program info ((uniquify-exp '()) e))]))
 
 ;; remove-complex-opera* : R1 -> R1
 (define (remove-complex-opera* p)
