@@ -40,27 +40,17 @@
     [(Int n) (Int n)]
     [(Prim 'read '()) (Prim 'read '())]
     [(Prim '- (list e1)) (pe-neg (pe-exp e1))]
-    [(Prim '+ (list e1 e2)) (pe-add (pe-exp e1) (pe-exp e2))]
-    ))
+    [(Prim '+ (list e1 e2)) (pe-add (pe-exp e1) (pe-exp e2))]))
 
 (define (pe-Rint p)
   (match p
-    [(Program info e) (Program info (pe-exp e))]
-    ))
-
-(define (test-pe p)
-  (assert "testing pe-Rint"
-     (equal? (interp-Rint p) (interp-Rint (pe-Rint p)))))
-
-(test-pe (parse-program `(program () (+ 10 (- (+ 5 3))))))
-(test-pe (parse-program `(program () (+ 1 (+ 3 1)))))
-(test-pe (parse-program `(program () (- (+ 3 (- 5))))))
+    [(Program info e) (Program info (pe-exp e))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HW1 Passes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (uniquify-exp symtab)
+(define (uniquify-exp env)
   (lambda (e)
     (match e
       [(Var x)
@@ -69,7 +59,7 @@
       [(Let x e body)
        (error "TODO: code goes here (uniquify-exp, let)")]
       [(Prim op es)
-       (Prim op (for/list ([e es]) ((uniquify-exp symtab) e)))])))
+       (Prim op (for/list ([e es]) ((uniquify-exp env) e)))])))
 
 ;; uniquify : R1 -> R1
 (define (uniquify p)
