@@ -28,23 +28,23 @@
           [else ((super interp-stmt env) ast)]
           )))
 
-    (define/override (interp-tail env CFG)
+    (define/override (interp-tail env blocks)
       (lambda (ast)
         (copious "interp-tail" ast)
         (match ast
           [(Seq s t)
            (define new-env ((interp-stmt env) s))
-           ((interp-tail new-env CFG) t)]
-          [else ((super interp-tail env CFG) ast)]
+           ((interp-tail new-env blocks) t)]
+          [else ((super interp-tail env blocks) ast)]
           )))
     
     (define/override (interp-program ast)
       (copious "interp-program" ast)
       (match ast
-        [(CProgram info G)
+        [(CProgram info blocks)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
-         (super interp-program (CProgram info G))]
+         (super interp-program (CProgram info blocks))]
         [else (error "interp-program unhandled" ast)]))
     ))
 

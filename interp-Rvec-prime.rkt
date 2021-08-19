@@ -132,29 +132,6 @@
                (search rest-memory))]
           [other (error 'fetch-page "unmatched ~a" m)])))
 
-    #;(define/override (primitives)
-      (set-union (super primitives)
-		 (set 'vector  'vector-ref 'vector-set! vector-length
-              ;; todo: move the following to a different interpreter -Jeremy
-                      'vector-proxy)))
-
-    #;(define/override (interp-op op)
-      (match op
-	['eq? (lambda (v1 v2)
-		(cond [(or (and (fixnum? v1) (fixnum? v2))
-			   (and (boolean? v1) (boolean? v2))
-			   (and (vector? v1) (vector? v2))
-                           (and (void? v1) (void? v2)))
-		       (eq? v1 v2)]))]
-        ['vector-proxy
-         (lambda (vec rs ws)
-           `(vector-proxy ,vec ,rs ,ws))]
-        ['vector vector]
-	['vector-length vector-length]
-	['vector-ref vector-ref]
-	['vector-set! vector-set!]
-	[else (super interp-op op)]))
-
     (define/override (interp-exp env)
       (lambda (ast)
         (define recur (interp-exp env))

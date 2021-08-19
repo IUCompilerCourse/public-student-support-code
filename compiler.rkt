@@ -2,6 +2,7 @@
 (require racket/set racket/stream)
 (require racket/fixnum)
 (require "interp-Rint.rkt")
+(require "interp-Rvar.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
@@ -89,3 +90,17 @@
 ;; print-x86 : x86 -> string
 (define (print-x86 p)
   (error "TODO: code goes here (print-x86)"))
+
+;; Define the compiler passes to be used by interp-tests and the grader
+;; Note that your compiler file (the file that defines the passes)
+;; must be named "compiler.rkt"
+(define compiler-passes
+  `( ("uniquify" ,uniquify ,interp-Rvar)
+     ;; Uncomment the following passes as you finish them.
+     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Rvar)
+     ;; ("explicate control" ,explicate-control ,interp-Cvar)
+     ;; ("instruction selection" ,select-instructions ,interp-x86-0)
+     ;; ("assign homes" ,assign-homes ,interp-x86-0)
+     ;; ("patch instructions" ,patch-instructions ,interp-x86-0)
+     ;; ("print x86" ,print-x86 #f)
+     ))
