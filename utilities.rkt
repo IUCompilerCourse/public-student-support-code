@@ -12,7 +12,6 @@
 
 #lang racket
 (require racket/struct)
-(require graph)
 
 ;; Version 0.2
 ;; ---------------------
@@ -45,7 +44,7 @@ Changelog:
 (require racket/pretty racket/match)
 (require (for-syntax racket))
 					;(require racket/async-channel)
-(require rackunit rackunit/text-ui rackunit/gui)
+(require rackunit rackunit/text-ui );rackunit/gui
 
 (define (symbolic? e)
   (match e
@@ -64,13 +63,12 @@ Changelog:
          read-fixnum read-program 
 	 compile compile-file check-passes-suite interp-tests compiler-tests
          compiler-tests-gui compiler-tests-suite
-         print-dot print-graph
          use-minimal-set-of-registers!
 	 general-registers num-registers-for-alloc registers-for-alloc
          caller-save callee-save caller-save-for-alloc callee-save-for-alloc
 	 arg-registers rootstack-reg register->color color->register
          registers align byte-reg->full-reg print-by-type strip-has-type
-         make-lets dict-set-all dict-remove-all goto-label get-CFG 
+         make-lets dict-set-all dict-remove-all goto-label get-basic-blocks 
          symbol-append any-tag parse-program vector->set atm? fst
          
          (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
@@ -121,13 +119,13 @@ Changelog:
          (struct-out CollectionNeeded?)
          (struct-out GlobalValue)
          (struct-out Allocate)
+         (struct-out AllocateHom)
          (struct-out AllocateClosure)
          (struct-out AllocateProxy)
          (contract-out [struct Call ((fun atm?) (arg* atm-list?))])
          (contract-out [struct TailCall ((fun atm?) (arg* atm-list?))])
-         (struct-out CFG)
          
-         (contract-out [struct Imm ((value fixnum?))])
+         (contract-out [struct Imm ((value integer?))]) ;; allow 64-bit
          (contract-out [struct Reg ((name symbol?))])
          (contract-out [struct Deref ((reg symbol?) (offset fixnum?))])
          (contract-out [struct Instr ((name symbol?) (arg* arg-list?))])
@@ -340,28 +338,6 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct CFG (block*) #:transparent #:property prop:custom-print-quotable 'never
-  #:methods gen:custom-write
-  [(define write-proc
-     (let ([csp (make-constructor-style-printer
-                 (lambda (obj) 'CFG)
-                 (lambda (obj) (list (CFG-block* obj))))])
-       (lambda (ast port mode)
-         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
-                (let ([recur (make-recur port mode)])
-                  (match ast
-                    [(CFG G)
-                     (for/list ([(label tail) (in-dict G)])
-                       (write-string (symbol->string label) port)
-                       (write-string ":" port)
-                       (newline port)
-                       (write-string "    " port)
-                       (recur tail port)
-                       (newline port))]))]
-               [(eq? (AST-output-syntax) 'abstract-syntax)
-                (csp ast port mode)]
-               ))))])
-     
 (define (print-info info port mode)
   (let ([recur (make-recur port mode)])
     (for ([(label data) (in-dict info)])
@@ -534,7 +510,7 @@ Changelog:
                 (csp ast port mode)]
                ))))])
   
-(struct CProgram (info CFG)
+(struct CProgram (info blocks)
   #:transparent
   #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
@@ -542,16 +518,16 @@ Changelog:
      (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'CProgram)
                  (lambda (obj) (list (CProgram-info obj)
-                                     (CProgram-CFG obj))))])
+                                     (CProgram-blocks obj))))])
        (lambda (ast port mode)
          (cond [(eq? (AST-output-syntax) 'concrete-syntax)
                 (let ([recur (make-recur port mode)])
                   (match ast
-                    [(CProgram info G)
+                    [(CProgram info blocks)
                      (write-string "program:" port)
                      (newline port)
                      (print-info info port mode)
-                     (for/list ([(label tail) (in-dict G)])
+                     (for/list ([(label tail) (in-dict blocks)])
                        (write-string (symbol->string label) port)
                        (write-string ":" port)
                        (newline port)
@@ -562,7 +538,7 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct X86Program (info CFG)
+(struct X86Program (info blocks)
   #:transparent
   #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
@@ -570,16 +546,16 @@ Changelog:
      (let ([csp (make-constructor-style-printer
                  (lambda (obj) 'X86Program)
                  (lambda (obj) (list (X86Program-info obj)
-                                     (X86Program-CFG obj))))])
+                                     (X86Program-blocks obj))))])
        (lambda (ast port mode)
          (cond [(eq? (AST-output-syntax) 'concrete-syntax)
                 (let ([recur (make-recur port mode)])
                   (match ast
-                    [(X86Program info G)
+                    [(X86Program info blocks)
                      (write-string "program:" port)
                      (newline port)
                      (print-info info port mode)
-                     (for/list ([(label tail) (in-dict G)])
+                     (for/list ([(label tail) (in-dict blocks)])
                        (write-string (symbol->string label) port)
                        (write-string ":" port)
                        (newline port)
@@ -735,6 +711,10 @@ Changelog:
      (for ([ty tys])
        (write-string " " port)
        (write-type ty port))
+     (write-string ")" port)]
+    [`(Vectorof ,ty)
+     (write-string "(Vectorof " port)
+     (write-type ty port)
      (write-string ")" port)]
     [`(,ts ... -> ,rt)
      (write-string "(" port)
@@ -1120,6 +1100,20 @@ Changelog:
           )
         ]))])
 
+(struct AllocateHom (amount type) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (match ast
+       [(AllocateHom amount type)
+        (let-values ([(line col pos) (port-next-location port)])
+          (write-string "(allocate-hom " port)
+          (write amount port)
+          (write-string " " port)
+          (write-type type port)
+          (write-string ")" port)
+          )
+        ]))])
+
 (struct AllocateClosure (amount type arity) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
@@ -1453,6 +1447,7 @@ Changelog:
     [(Apply e es) #t]
     [(GlobalValue n) #t]
     [(Allocate n t) #t]
+    [(AllocateHom n t) #t]
     [(AllocateProxy t) #t]
     [(AllocateClosure n t a) #t]
     [(If cnd thn els) #t]
@@ -1492,6 +1487,7 @@ Changelog:
 (define (type? t)
   (match t
     [`(Vector ,ts ...) #t]
+    [`(Vectorof ,t) #t]
     [`(PVector ,ts ...) #t]
     [`(All ,xs ,t) #t]
     ['Integer #t]
@@ -1515,6 +1511,8 @@ Changelog:
     [(Assign x e) #t]
     [(Collect n) #t]
     [(Prim 'vector-set! es) #t]
+    [(Prim 'any-vector-set! es) #t]
+    [(Prim 'vectorof-set! es) #t]
     [(Prim 'read '()) #t]
     [(Call f arg) #t]
     [else #f]))
@@ -1578,11 +1576,12 @@ Changelog:
 
 
 (define src-primitives
-  '(read + - eq? < <= > >= and or not
+  '(read + - * eq? < <= > >= and or not
          vector vector-ref vector-set! vector-length
          procedure-arity
          boolean? integer? vector? procedure? void?
-         any-vector-ref any-vector-set! any-vector-length))
+         any-vector-ref any-vector-set! any-vector-length
+         make-vector))
 
 (define (parse-exp e)
   (match e
@@ -2118,7 +2117,10 @@ Changelog:
   (run-tests (compiler-tests-suite name typechecker passes test-family test-nums) (test-verbosity)))
 
 (define (compiler-tests-gui name typechecker passes test-family test-nums)
-  (test/gui (compiler-tests-suite name typechecker passes test-family test-nums)))
+  ;; Disable this for now to run on a linux server. -Jeremy
+  #;(test/gui (compiler-tests-suite name typechecker passes test-family test-nums))
+  (void)
+  )
 
 
 ;; Takes a function of 1 argument (or #f) and Racket expression, and
@@ -2203,6 +2205,8 @@ Changelog:
         ;; need at least 2 arg-registers, see limit-functions -Jeremy
         (set! arg-registers (vector 'rdi 'rsi))
         (set! registers-for-alloc (vector  'rsi 'rdi 'rbx))
+        ; for the example in the register allocation chapter 
+        ;(set! registers-for-alloc (vector  'rcx))
         )
       (begin
         ;; The following ordering is specified in the x86-64 conventions.
@@ -2310,33 +2314,6 @@ Changelog:
                       #:before-first (format "\tmovq\t%rax, %r~a\n\tcallq\t~a\n" depth (label-name "print_vecbegin"))
                       #:after-last (format "\tcallq\t~a\n" (label-name "print_vecend"))))]))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Graph Printing
-
-(define (print-dot graph file-name)
-  (if (at-debug-level? 1)
-      (call-with-output-file file-name #:exists 'replace
-	(lambda (out-file)
-	  (write-string "strict graph {" out-file) (newline out-file)
-	  
-	  (for ([v (in-vertices graph)])
-	       (write-string (format "~a;\n" v) out-file))
-	  
-	  (for ([u (in-vertices graph)])
-	       (for ([v (in-neighbors graph u)])
-		    (write-string (format "~a -- ~a;\n" u v) out-file)))
-	  
-	  (write-string "}" out-file)
-	  (newline out-file)))
-      '()))
-
-(define (print-graph graph)
-  (for ([u (in-vertices graph)])
-    (for ([v (in-neighbors graph u)])
-      (write-string (format "~a -> ~a;\n" u v))
-      )))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Miscelaneous helper functions
 
@@ -2359,10 +2336,10 @@ Changelog:
     (dict-set d k v)))
 
 ;; This parameter (dynamically scoped thingy) is used for goto.
-(define get-CFG (make-parameter '()))
+(define get-basic-blocks (make-parameter '()))
 
 (define (goto-label label)
-  (dict-ref (get-CFG) label))
+  (dict-ref (get-basic-blocks) label))
 
 (define (symbol-append s1 s2)
   (string->symbol (string-append (symbol->string s1) (symbol->string s2))))
@@ -2370,11 +2347,12 @@ Changelog:
 (define (any-tag ty)
   (match ty
     ['Integer 1]		;; 001
-    ['Boolean 4]		;; 100
-    ['Void 5]                   ;; 101
     [`(Vector ,ts ...) 2]	;; 010
     [`(PVector ,ts ...) 2]
     [`(,ts ... -> ,rt) 3]	;; 011
+    ['Boolean 4]		;; 100
+    ['Void 5]                   ;; 101
+    [`(Vectorof ,t) 6]          ;; 110
     [else (error "in any-tag, unrecognized type" ty)]
     ))
 

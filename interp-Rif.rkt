@@ -19,9 +19,6 @@
         ['- fx-]
         ['read read-fixnum]
         ['not (lambda (v) (match v [#t #f] [#f #t]))]
-        ['or (lambda (v1 v2)
-               (cond [(and (boolean? v1) (boolean? v2))
-                      (or v1 v2)]))]
         ['eq? (lambda (v1 v2)
                 (cond [(or (and (fixnum? v1) (fixnum? v2))
                            (and (boolean? v1) (boolean? v2))
@@ -56,6 +53,11 @@
          (match v1
            [#t (match (recur e2) [#t #t] [#f #f])]
            [#f #f])]
+        [(Prim 'or (list e1 e2))
+         (define v1 (recur e1))
+         (match v1
+           [#t #t]
+           [#f (match (recur e2) [#t #t] [#f #f])])]
         [(Prim op args)
          (apply (interp-op op) (for/list ([e args]) (recur e)))]
         [else ((super interp-exp env) e)]

@@ -9,6 +9,7 @@
 ;; (debug-level 1)
 ;; (AST-output-syntax 'concrete-syntax)
 
+<<<<<<< HEAD
 ;; Define the passes to be used by interp-tests and the grader
 ;; Note that your compiler file (the file that defines the passes)
 ;; should be named "compiler.rkt"
@@ -23,6 +24,8 @@
      ;; (list "print x86" print-x86 #f)
      ))
 
+=======
+>>>>>>> 7ca533ec522361719dfe89a6be6325302f22c92f
 ;; all the files in the tests/ directory with extension ".rkt".
 (define all-tests
   (map (lambda (p) (car (string-split (path->string p) ".")))
@@ -38,9 +41,9 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-(interp-tests "var" #f passes interp-Rvar "var_test" (tests-for "var"))
+(interp-tests "var" #f compiler-passes interp-Rvar "var_test" (tests-for "var"))
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.
-;; (compiler-tests "var" #f passes "var_test" (tests-for "var"))
+;; (compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))
 
