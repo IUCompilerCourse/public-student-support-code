@@ -86,6 +86,6 @@
 (define (patch-instructions p)
   (error "TODO: code goes here (patch-instructions)"))
 
-;; print-x86 : x86 -> string
-(define (print-x86 p)
-  (error "TODO: code goes here (print-x86)"))
+;; prelude-and-conclusion : x86 -> x86
+(define (prelude-and-conclusion p)
+  (error "TODO: code goes here (prelude-and-conclusion)"))

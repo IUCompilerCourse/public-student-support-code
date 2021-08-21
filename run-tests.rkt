@@ -13,14 +13,14 @@
 ;; Note that your compiler file (the file that defines the passes)
 ;; should be named "compiler.rkt"
 (define passes
-  `( ("uniquify" ,uniquify ,interp-Rvar)
+  (list (list "uniquify" uniquify interp-Rvar type-check-Rvar)
      ;; Uncomment the following passes as you finish them.
-     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Rvar)
-     ;; ("explicate control" ,explicate-control ,interp-Cvar)
-     ;; ("instruction selection" ,select-instructions ,interp-x86-0)
-     ;; ("assign homes" ,assign-homes ,interp-x86-0)
-     ;; ("patch instructions" ,patch-instructions ,interp-x86-0)
-     ;; ("print x86" ,print-x86 #f)
+     ;; (list "remove complex opera*" remove-complex-opera* interp-Rvar type-check-Rvar)
+     ;; (list "explicate control" explicate-control interp-Cvar type-check-Cvar)
+     ;; (list "instruction selection" select-instructions interp-pseudo-x86-0 )
+     ;; (list "assign homes" assign-homes interp-x86-0)
+     ;; (list "patch instructions" patch-instructions interp-x86-0)
+     ;; (list "print x86" print-x86 #f)
      ))
 
 ;; all the files in the tests/ directory with extension ".rkt".
