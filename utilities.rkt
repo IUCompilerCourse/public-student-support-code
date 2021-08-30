@@ -12,6 +12,7 @@
 
 #lang racket
 (require racket/struct)
+(provide parse-exp)
 
 ;; Version 0.2
 ;; ---------------------
