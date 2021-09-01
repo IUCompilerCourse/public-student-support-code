@@ -12,7 +12,6 @@
 
 #lang racket
 (require racket/struct)
-(provide parse-exp)
 
 ;; Version 0.2
 ;; ---------------------
@@ -71,6 +70,7 @@ Changelog:
          registers align byte-reg->full-reg print-by-type strip-has-type
          make-lets dict-set-all dict-remove-all goto-label get-basic-blocks 
          symbol-append any-tag parse-program vector->set atm? fst
+         print-x86 print-x86-class
          
          (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
          (contract-out [struct Var ((name symbol?))])
@@ -1654,6 +1654,73 @@ Changelog:
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Printing x86
+
+(define print-x86-class
+  (class object%
+    (super-new)
+
+    (define/public (print-x86-imm e)
+      (match e
+        [(Deref reg i)
+         (format "~a(%~a)" i reg)]
+        [(Imm n) (format "$~a" n)]
+        [(Reg r) (format "%~a" r)]
+        [(ByteReg r) (format "%~a" r)]
+        ))
+    
+    (define/public (print-x86-instr e)
+      (verbose "print-x86-instr" e)
+      (match e
+        [(Callq f n)
+         (format "\tcallq\t~a\n" (label-name (symbol->string f)))]
+        [(Jmp label) (format "\tjmp ~a\n" (label-name label))]
+        [(Instr 'set (list cc d)) (format "\tset~a\t~a\n" cc (print-x86-imm d))]
+        [(Instr 'cmpq (list s1 s2))
+         (format "\tcmpq\t~a, ~a\n" (print-x86-imm s1) (print-x86-imm s2))]
+        [(Instr instr-name (list s d))
+         (format "\t~a\t~a, ~a\n" instr-name
+                 (print-x86-imm s) 
+                 (print-x86-imm d))]
+        [(Instr instr-name (list d))
+         (format "\t~a\t~a\n" instr-name (print-x86-imm d))]
+        [(Retq)
+         "\tretq"]
+        [(JmpIf cc label) (format "\tj~a ~a\n" cc (label-name label))]
+        [else (error "print-x86-instr, unmatched" e)]))
+    
+    (define/public (print-x86-block e)
+      (match e
+        [(Block info ss)
+         (string-append* (for/list ([s ss]) (print-x86-instr s)))]
+        [else (error "print-x86-block unhandled " e)]))
+
+    (define/public (print-x86 e)
+      (match e
+        [(X86Program info blocks)
+         (string-append
+          (string-append*
+           (for/list ([(label block) (in-dict blocks)])
+             (string-append
+              (if (eq? label 'main)
+                  (format "\t.globl ~a\n" (label-name 'main))
+                  "")
+              (string-append (format "~a:\n" (label-name label))
+                             (print-x86-block block)))))
+          "\n"
+          )]
+        [else (error "print-x86, unmatched" e)]
+        ))
+    
+    ))
+
+
+(define (print-x86 x86-ast)
+  (define printer (new print-x86-class))
+  (send printer print-x86 x86-ast))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (while condition body ...)
   (let loop ()
@@ -1971,12 +2038,18 @@ Changelog:
                                 (loop (cdr passes) new-p)
                                 ]))])
               (cond [(string? x86)
+                     (error "error, compiler should produce x86 AST, not a string")
                      (write-string x86 out-file)
                      (newline out-file)
                      (flush-output out-file)
                      #t]
                     [else
-                     (error "compiler did not produce x86 output")])
+                     #;(error "compiler did not produce x86 output")
+                     (define x86-str (print-x86 x86))
+                     (write-string x86-str out-file)
+                     (newline out-file)
+                     (flush-output out-file)
+                     #t])
               )
             #f)
         ))))
