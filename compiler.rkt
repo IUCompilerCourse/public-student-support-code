@@ -87,9 +87,9 @@
 (define (patch-instructions p)
   (error "TODO: code goes here (patch-instructions)"))
 
-;; print-x86 : x86 -> string
-(define (print-x86 p)
-  (error "TODO: code goes here (print-x86)"))
+;; prelude-and-conclusion : x86 -> x86
+(define (prelude-and-conclusion p)
+  (error "TODO: code goes here (prelude-and-conclusion)"))
 
 ;; Define the compiler passes to be used by interp-tests and the grader
 ;; Note that your compiler file (the file that defines the passes)
@@ -102,5 +102,6 @@
      ;; ("instruction selection" ,select-instructions ,interp-x86-0)
      ;; ("assign homes" ,assign-homes ,interp-x86-0)
      ;; ("patch instructions" ,patch-instructions ,interp-x86-0)
-     ;; ("print x86" ,print-x86 #f)
+     ;; ("prelude-and-conclusion" ,prelude-and-conclusion ,interp-x86-0)
      ))
+
