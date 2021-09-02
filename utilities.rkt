@@ -70,6 +70,7 @@ Changelog:
          registers align byte-reg->full-reg print-by-type strip-has-type
          make-lets dict-set-all dict-remove-all goto-label get-basic-blocks 
          symbol-append any-tag parse-program vector->set atm? fst
+         print-x86 print-x86-class
          
          (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
          (contract-out [struct Var ((name symbol?))])
@@ -1653,6 +1654,73 @@ Changelog:
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Printing x86
+
+(define print-x86-class
+  (class object%
+    (super-new)
+
+    (define/public (print-x86-imm e)
+      (match e
+        [(Deref reg i)
+         (format "~a(%~a)" i reg)]
+        [(Imm n) (format "$~a" n)]
+        [(Reg r) (format "%~a" r)]
+        [(ByteReg r) (format "%~a" r)]
+        ))
+    
+    (define/public (print-x86-instr e)
+      (verbose "print-x86-instr" e)
+      (match e
+        [(Callq f n)
+         (format "\tcallq\t~a\n" (label-name (symbol->string f)))]
+        [(Jmp label) (format "\tjmp ~a\n" (label-name label))]
+        [(Instr 'set (list cc d)) (format "\tset~a\t~a\n" cc (print-x86-imm d))]
+        [(Instr 'cmpq (list s1 s2))
+         (format "\tcmpq\t~a, ~a\n" (print-x86-imm s1) (print-x86-imm s2))]
+        [(Instr instr-name (list s d))
+         (format "\t~a\t~a, ~a\n" instr-name
+                 (print-x86-imm s) 
+                 (print-x86-imm d))]
+        [(Instr instr-name (list d))
+         (format "\t~a\t~a\n" instr-name (print-x86-imm d))]
+        [(Retq)
+         "\tretq\n"]
+        [(JmpIf cc label) (format "\tj~a ~a\n" cc (label-name label))]
+        [else (error "print-x86-instr, unmatched" e)]))
+    
+    (define/public (print-x86-block e)
+      (match e
+        [(Block info ss)
+         (string-append* (for/list ([s ss]) (print-x86-instr s)))]
+        [else (error "print-x86-block unhandled " e)]))
+
+    (define/public (print-x86 e)
+      (match e
+        [(X86Program info blocks)
+         (string-append
+          (string-append*
+           (for/list ([(label block) (in-dict blocks)])
+             (string-append
+              (if (eq? label 'main)
+                  (format "\t.globl ~a\n" (label-name 'main))
+                  "")
+              (string-append (format "~a:\n" (label-name label))
+                             (print-x86-block block)))))
+          "\n"
+          )]
+        [else (error "print-x86, unmatched" e)]
+        ))
+    
+    ))
+
+
+(define (print-x86 x86-ast)
+  (define printer (new print-x86-class))
+  (send printer print-x86 x86-ast))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (while condition body ...)
   (let loop ()
@@ -1842,14 +1910,14 @@ Changelog:
 (define ((check-passes-suite name typechecker passes initial-interp) test-name)
   (test-suite
    test-name
-   (let* ([input-file-name (format "tests/~a.in" test-name)]
-          [result-file-name (format "tests/~a.res" test-name)]
-          [program-name (format "tests/~a.rkt" test-name)]
+   (let* ([input-file-name (format "./tests/~a.in" test-name)]
+          [result-file-name (format "./tests/~a.res" test-name)]
+          [program-name (format "./tests/~a.rkt" test-name)]
           [sexp (read-program program-name)]
-          [type-error-expected (file-exists? (format "tests/~a.tyerr" test-name))]
+          [type-error-expected (file-exists? (format "./tests/~a.tyerr" test-name))]
           [tsexp ((check-exception name test-name type-error-expected)
                   (thunk (test-typecheck typechecker sexp)))]
-          [error-expected (file-exists? (format "tests/~a.err" test-name))]
+          [error-expected (file-exists? (format "./tests/~a.err" test-name))]
           [checker (check-exception name test-name error-expected)])
      (test-case
        "typecheck"  
@@ -1970,12 +2038,22 @@ Changelog:
                                 (loop (cdr passes) new-p)
                                 ]))])
               (cond [(string? x86)
+                     (error "error, compiler should produce x86 AST, not a string")
                      (write-string x86 out-file)
                      (newline out-file)
                      (flush-output out-file)
                      #t]
                     [else
-                     (error "compiler did not produce x86 output")])
+                     #;(error "compiler did not produce x86 output")
+                     (define x86-str (print-x86 x86))
+                     (write-string x86-str out-file)
+                     (newline out-file)
+                     (flush-output out-file)
+                     (cond [(> (debug-level) 0)
+                            (display "x86 output:\n")
+                            (display x86-str)]
+                           [else  '()])
+                     #t])
               )
             #f)
         ))))
@@ -2083,25 +2161,25 @@ Changelog:
      "compiler tests"
      (for/list ([test-number (in-list test-nums)])
        (let* ([test-name (format "~a_~a" test-family test-number)]
-              [type-error-expected (file-exists? (format "tests/~a.tyerr" test-name))]
-              [typechecks (compiler (format "tests/~a.rkt" test-name))])
+              [type-error-expected (file-exists? (format "./tests/~a.tyerr" test-name))]
+              [typechecks (compiler (format "./tests/~a.rkt" test-name))])
          (test-suite
           test-name
           (if type-error-expected
               (test-case "typecheck" (check-false typechecks "Expected expression to fail typechecking"))
 	      (if (not typechecks) (fail "Expected expression to typecheck")
 		  (test-case "code generation"
-			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o tests/~a.s -o tests/~a.out" test-name test-name))])
+			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o ./tests/~a.s -o ./tests/~a.out" test-name test-name))])
 			       (if (not gcc-output) (fail "Failed during assembly")
-				   (let ([input (if (file-exists? (format "tests/~a.in" test-name))
-						    (format " < tests/~a.in" test-name)
+				   (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
+						    (format " < ./tests/~a.in" test-name)
 						    "")]
-					 [output (if (file-exists? (format "tests/~a.res" test-name))
+					 [output (if (file-exists? (format "./tests/~a.res" test-name))
 						     (call-with-input-file
-							 (format "tests/~a.res" test-name)
+							 (format "./tests/~a.res" test-name)
 						       (lambda (f) (read-line f)))
 						     "42")]
-					 [error-expected (file-exists? (format "tests/~a.err" test-name))])
+					 [error-expected (file-exists? (format "./tests/~a.err" test-name))])
 				     (let* ([command (format "./tests/~a.out ~a" test-name input)]
 					    [result (get-value-or-fail command output)])
 				       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
