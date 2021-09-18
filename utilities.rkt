@@ -1685,7 +1685,7 @@ Changelog:
         [(Instr instr-name (list d))
          (format "\t~a\t~a\n" instr-name (print-x86-imm d))]
         [(Retq)
-         "\tretq"]
+         "\tretq\n"]
         [(JmpIf cc label) (format "\tj~a ~a\n" cc (label-name label))]
         [else (error "print-x86-instr, unmatched" e)]))
     
@@ -1910,14 +1910,14 @@ Changelog:
 (define ((check-passes-suite name typechecker passes initial-interp) test-name)
   (test-suite
    test-name
-   (let* ([input-file-name (format "tests/~a.in" test-name)]
-          [result-file-name (format "tests/~a.res" test-name)]
-          [program-name (format "tests/~a.rkt" test-name)]
+   (let* ([input-file-name (format "./tests/~a.in" test-name)]
+          [result-file-name (format "./tests/~a.res" test-name)]
+          [program-name (format "./tests/~a.rkt" test-name)]
           [sexp (read-program program-name)]
-          [type-error-expected (file-exists? (format "tests/~a.tyerr" test-name))]
+          [type-error-expected (file-exists? (format "./tests/~a.tyerr" test-name))]
           [tsexp ((check-exception name test-name type-error-expected)
                   (thunk (test-typecheck typechecker sexp)))]
-          [error-expected (file-exists? (format "tests/~a.err" test-name))]
+          [error-expected (file-exists? (format "./tests/~a.err" test-name))]
           [checker (check-exception name test-name error-expected)])
      (test-case
        "typecheck"  
@@ -2049,6 +2049,10 @@ Changelog:
                      (write-string x86-str out-file)
                      (newline out-file)
                      (flush-output out-file)
+                     (cond [(> (debug-level) 0)
+                            (display "x86 output:\n")
+                            (display x86-str)]
+                           [else  '()])
                      #t])
               )
             #f)
@@ -2157,25 +2161,25 @@ Changelog:
      "compiler tests"
      (for/list ([test-number (in-list test-nums)])
        (let* ([test-name (format "~a_~a" test-family test-number)]
-              [type-error-expected (file-exists? (format "tests/~a.tyerr" test-name))]
-              [typechecks (compiler (format "tests/~a.rkt" test-name))])
+              [type-error-expected (file-exists? (format "./tests/~a.tyerr" test-name))]
+              [typechecks (compiler (format "./tests/~a.rkt" test-name))])
          (test-suite
           test-name
           (if type-error-expected
               (test-case "typecheck" (check-false typechecks "Expected expression to fail typechecking"))
 	      (if (not typechecks) (fail "Expected expression to typecheck")
 		  (test-case "code generation"
-			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o tests/~a.s -o tests/~a.out" test-name test-name))])
+			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o ./tests/~a.s -o ./tests/~a.out" test-name test-name))])
 			       (if (not gcc-output) (fail "Failed during assembly")
-				   (let ([input (if (file-exists? (format "tests/~a.in" test-name))
-						    (format " < tests/~a.in" test-name)
+				   (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
+						    (format " < ./tests/~a.in" test-name)
 						    "")]
-					 [output (if (file-exists? (format "tests/~a.res" test-name))
+					 [output (if (file-exists? (format "./tests/~a.res" test-name))
 						     (call-with-input-file
-							 (format "tests/~a.res" test-name)
+							 (format "./tests/~a.res" test-name)
 						       (lambda (f) (read-line f)))
 						     "42")]
-					 [error-expected (file-exists? (format "tests/~a.err" test-name))])
+					 [error-expected (file-exists? (format "./tests/~a.err" test-name))])
 				     (let* ([command (format "./tests/~a.out ~a" test-name input)]
 					    [result (get-value-or-fail command output)])
 				       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
