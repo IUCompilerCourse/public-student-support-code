@@ -1,4 +1,6 @@
+#lang racket
 (require graph)
+(require "utilities.rkt")
 
 (provide print-dot print-graph)
 
