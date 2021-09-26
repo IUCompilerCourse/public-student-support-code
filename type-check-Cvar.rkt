@@ -26,7 +26,7 @@
          (define-values (new-es ts)
            (for/lists (exprs types) ([e es]) ((type-check-atm env) e)))
          (values (Prim op new-es) (type-check-op op ts e))]
-        [else (error 'type-check-exp "expected a Cvar exp, not ~a" e)]))
+        [else (error 'type-check-exp "expected a C exp, not ~a" e)]))
     
     (define/public ((type-check-stmt env) s)
       (match s
