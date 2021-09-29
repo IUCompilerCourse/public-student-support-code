@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-Rint)
+(provide interp-Rint interp-Rint-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interpreter for Rint: integer arithmetic
@@ -32,5 +32,36 @@
   (match p
     [(Program '() e) (interp-exp e)]
     ))
+
+
+;; This version of the interpreter for Rint is the base class
+;; for interp-Rvar-class in interp-Rvar.rkt.
+
+(define interp-Rint-class
+  (class object%
+    (super-new)
+    
+    (define/public ((interp-exp env) e)
+      (match e
+        [(Int n) n]
+        [(Prim 'read '())
+         (define r (read))
+         (cond [(fixnum? r) r]
+               [else (error 'interp-exp "expected an integer" r)])]
+        [(Prim '- (list e))
+         (define v ((interp-exp env) e))
+         (fx- 0 v)]
+        [(Prim '+ (list e1 e2))
+         (define v1 ((interp-exp env) e1))
+         (define v2 ((interp-exp env) e2))
+         (fx+ v1 v2)]
+        ))
+
+    (define/public (interp-program p)
+      (match p
+        [(Program '() e) ((interp-exp '()) e)]
+        ))
+    ))
+
 
 
