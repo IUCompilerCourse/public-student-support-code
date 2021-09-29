@@ -54,6 +54,9 @@
 
 (define (make-multigraph edge-list)
   (define adj (make-hash))
+  (define g (multigraph adj))
   (for ([e edge-list])
-    (add-directed-edge! adj (first e) (second e)))
-  (multigraph adj))
+    (add-vertex! g (first e))
+    (add-vertex! g (second e))
+    (add-directed-edge! g (first e) (second e)))
+  g)
