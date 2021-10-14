@@ -2,10 +2,9 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require (only-in "any.rkt" compile-Rany))
-(require (only-in "type-check-Rlambda.rkt" typed-vars))
-(require "type-check-Rany.rkt")
-(require "type-check-Cany.rkt")
+(require (only-in "conditionals.rkt" compile-Rif))
+(require "type-check-Rif.rkt")
+(require "type-check-Cif.rkt")
 (provide type-check-Rwhile type-check-Rwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -17,12 +16,21 @@
 ;; type-check-Rwhile
 
 (define type-check-Rwhile-class
-  (class type-check-Rany-class
+  (class type-check-Rif-class
     (super-new)
     (inherit check-type-equal?)
 
+    ;; lenient type checking for '_
+    (define/override (type-equal? t1 t2)
+      (debug 'type-equal? "lenient" t1 t2)
+      (match* (t1 t2)
+        [('_ t2) #t]
+        [(t1 '_) #t]
+        [(other wise) (equal? t1 t2)]))
+    
     (define/override (type-check-exp env)
       (lambda (e)
+        (debug 'type-check-exp "Rwhile" e)
         (define recur (type-check-exp env))
         (match e
           [(SetBang x rhs)
