@@ -15,7 +15,7 @@
 (define (type-check-Cwhile-mixin super-class)
   (class super-class
     (super-new)
-    (inherit type-check-exp check-type-equal? type-equal?)
+    (inherit check-type-equal? type-equal?)
     ; type-check-apply fun-def-type
 
     (define/public (combine-types t1 t2)
@@ -82,6 +82,14 @@
              (set! type-changed #t)
              (dict-set! env x t)]))
 
+    (define/override (type-check-exp env)
+      (lambda (e)
+        (debug 'type-check-exp "Cwhile" e)
+        (define recur (type-check-exp env))
+        (match e
+          [(Void) (values (Void) 'Void)]
+          [else ((super type-check-exp env) e)])))
+    
     (define/override (type-check-stmt env)
       (lambda (s)
         (verbose 'type-check-stmt s)
