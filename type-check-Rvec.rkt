@@ -1,7 +1,7 @@
 #lang racket
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
-(require "type-check-Rif.rkt")
+(require "type-check-Rwhile.rkt")
 (provide type-check-Rvec type-check-Rvec-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -12,7 +12,7 @@
 ;; type-check-Rvec
 
 (define type-check-Rvec-class
-  (class type-check-Rif-class
+  (class type-check-Rwhile-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -20,7 +20,6 @@
       (lambda (e)
         (define recur (type-check-exp env))
         (match e
-          [(Void) (values (Void) 'Void)]
           [(Prim 'vector es)
            (define-values (e* t*) (for/lists (e* t*) ([e es]) (recur e)))
            (define t `(Vector ,@t*))
