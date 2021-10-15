@@ -2,53 +2,64 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require (only-in "any.rkt" compile-Rany))
-(require (only-in "type-check-Rlambda.rkt" typed-vars))
-(require "type-check-Rany.rkt")
-(require "type-check-Cany.rkt")
-(provide type-check-Cwhile type-check-Cwhile-class)
+(require "type-check-Rwhile.rkt")
+(require "type-check-Cvar.rkt")
+(require "type-check-Cif.rkt")
+(provide type-check-Cwhile type-check-Cwhile-mixin type-check-Cwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Cwhile
 
 ;; Dataflow analysis
 
-(define FV-Rwhile
-  (class compile-Rany
+(define (type-check-Cwhile-mixin super-class)
+  (class super-class
     (super-new)
+    (inherit type-check-exp check-type-equal? type-equal?)
+    ; type-check-apply fun-def-type
+
+    (define/public (combine-types t1 t2)
+      (match (list t1 t2)
+        [(list '_ t2) t2]
+        [(list t1 '_) t1]
+        [else
+         t1]))
     
-    (define/override (free-variables e)
-      (define (recur e) (send this free-variables e))
+    (define/public (free-vars-exp e)
+      (define (recur e) (send this free-vars-exp e))
       (match e
-        [(Var x)
-         (hash x (HasType (Var x) '_))]
+        [(Var x) (set x)]
+        [(HasType e t) (recur e)]
+        [(Int n) (set)]
+        [(Bool b) (set)]
+        [(FunRef f) (set)]
+        [(FunRefArity f n) (set)]
+        [(Let x e body)
+	 (set-union (recur e) (set-remove (recur body) x))]
+        [(If cnd thn els)
+         (set-union (recur cnd) (recur thn) (recur els))]
+	[(Lambda (list `[,xs : ,Ts] ...) rT body)
+         (define (rm x s) (set-remove s x))
+         (foldl rm (recur body) xs)]
+	[(Apply e es)
+	 (apply set-union (cons (recur e) (map recur es)))]
+	[(Prim op es)
+	 (apply set-union (cons (set) (map recur es)))]
+        [(WhileLoop cnd body)
+         (set-union (recur cnd) (recur body))]
+        [(Begin es e)
+         (apply set-union (cons (recur e) (map recur es)))]
+        [(SetBang x rhs) (set-union (set x) (recur rhs))]
+        [(ValueOf e ty) (recur e)]
+        [(Exit) (set)]
         ;; C-level expressions
-        [(Void)
-         (hash)]
-        [(Allocate size ty)
-         (hash)]
-        [(AllocateClosure len ty arity)
-         (hash)]
-        [(GlobalValue name)
-         (hash)]
-        [(Call f arg*)
-         (hash-union (recur f) (apply hash-union (map recur arg*)))]
-	[else (super free-variables e)]
-	))
-    ))
-(define FV-Rwhile-inst (new FV-Rwhile))
-
-(define (free-vars-exp e)
-  (define fvs-hash (send FV-Rwhile-inst free-variables e))
-  (list->set (hash-keys fvs-hash)))
-
-
-(define type-check-Cwhile-class
-  (class type-check-Cany-class
-    (super-new)
-    (inherit type-check-exp check-type-equal? type-equal? combine-types
-             type-check-apply fun-def-type)
-
+        [(Void) (set)]
+        [(Allocate size ty) (set)]
+        [(AllocateClosure len ty arity) (set)]
+        [(GlobalValue name) (set)]
+        [(Call f arg*) (apply set-union (cons (recur f) (map recur arg*)))]
+	[else (error 'free-vars-exp "unmatched ~a" e)]))
+    
     (define type-changed #t)
 
     (define (exp-ready? exp env)
@@ -87,7 +98,7 @@
                        (exp-ready? rhs env))
            ((type-check-exp env) s)]
           [(Prim 'read '()) (void)]
-          [(Call e es)
+          #;[(Call e es)
            #:when (and (exp-ready? e env)
                        (for/and ([arg es]) (exp-ready? arg env)))
            (define-values (e^ es^ rt) (type-check-apply env e es))
@@ -95,7 +106,7 @@
           [else (void)]
           )))
 
-    (define/override (type-check-tail env block-env G)
+    (define/override (type-check-tail env block-env blocks)
       (lambda (t)
         (verbose 'type-check-tail t)
         (match t
@@ -106,7 +117,7 @@
           [(Return e) '_]      
           [(Seq s t)
            ((type-check-stmt env) s)
-           ((type-check-tail env block-env G) t)]
+           ((type-check-tail env block-env blocks) t)]
           [(Goto label)
            (cond [(dict-has-key? block-env label)
                   (dict-ref block-env label)]
@@ -117,18 +128,18 @@
                   (unless (type-equal? Tc 'Boolean)
                     (error "type error: condition should be Boolean, not" Tc))
                   ])
-           (define T1 ((type-check-tail env block-env G) tail1))
-           (define T2 ((type-check-tail env block-env G) tail2))
+           (define T1 ((type-check-tail env block-env blocks) tail1))
+           (define T2 ((type-check-tail env block-env blocks) tail2))
            (unless (type-equal? T1 T2)
              (error "type error: branches of if should have same type, not"
                     T1 T2))
            (combine-types T1 T2)]
-          [(TailCall f arg*)
+          #;[(TailCall f arg*)
            #:when (and (exp-ready? f env)
                        (for/and ([arg arg*]) (exp-ready? arg env)))
            (define-values (f^ arg*^ rt) (type-check-apply env f arg*))
            rt]
-          [(TailCall f arg*) '_]
+          #;[(TailCall f arg*) '_]
           [(Exit) '_]
           )))
 
@@ -139,19 +150,19 @@
         [(Seq s t) (adjacent-tail t)]
         [else (set)]))
 
-    (define (C-CFG->graph cfg)
+    (define (C-blocks->CFG blocks)
       (define G (make-multigraph '()))
-      (for ([label (in-dict-keys cfg)])
+      (for ([label (in-dict-keys blocks)])
         (add-vertex! G label))
-      (for ([(src b) (in-dict cfg)])
+      (for ([(src b) (in-dict blocks)])
         (for ([tgt (adjacent-tail b)])
           (add-directed-edge! G src tgt)))
       G)
 
-    (define/override (type-check-def global-env)
+    #;(define/override (type-check-def global-env)
       (lambda (d)
         (match d
-          [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info CFG)
+          [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info blocks)
            (verbose "type-check-def" f)
            (define env (make-hash (append (map cons xs ps) global-env)))
            (define block-env (make-hash))
@@ -159,8 +170,8 @@
            (define (iterate)
              (cond [type-changed
                     (set! type-changed #f)
-                    (for ([(label tail) (in-dict CFG)])
-                      (define t ((type-check-tail env block-env CFG) tail))
+                    (for ([(label tail) (in-dict blocks)])
+                      (define t ((type-check-tail env block-env blocks) tail))
                       (update-type label t block-env)
                       )
                     (verbose "type-check-def" env block-env)
@@ -178,10 +189,10 @@
                         #:when (not (dict-has-key? global-env x)))
                (cons x t)))
            (define new-info (dict-set info 'locals-types locals-types))
-           (Def f p:t* rt new-info CFG)]
+           (Def f p:t* rt new-info blocks)]
           )))
 
-    (define/override (type-check-program p)
+    #;(define/override (type-check-program p)
       (match p
         [(ProgramDefs info ds)
          (define new-env (for/list ([d ds]) 
@@ -190,7 +201,43 @@
                        ((type-check-def new-env) d)))
          (ProgramDefs info ds^)]))
 
+    (define/override (type-check-program p)
+      (match p
+        [(CProgram info blocks)
+         (define env (make-hash))
+         (define block-env (make-hash))
+         (set! type-changed #t)
+         (define (iterate)
+           (cond [type-changed
+                  (set! type-changed #f)
+                  (for ([(label tail) (in-dict blocks)])
+                    (define t ((type-check-tail env block-env blocks) tail))
+                    (update-type label t block-env)
+                    )
+                  (verbose "type-check-def" env block-env)
+                  (iterate)]
+                 [else (void)]))
+         (iterate)
+         
+         (define start 'start)
+         (unless (dict-has-key? block-env start)
+           (error 'type-check-def "failed to infer type for ~a" start))
+         (define t (dict-ref block-env start))
+         (define locals-types
+           (for/list ([(x t) (in-dict env)])
+             (cons x t)))
+         (define new-info (dict-set info 'locals-types locals-types))
+         (unless (type-equal? t 'Integer)
+           (error "return type of program must be Integer, not" t))
+         (CProgram new-info blocks)]
+        [else (super type-check-program p)]))
+
     ))
+
+(define type-check-Cwhile-class (type-check-Cwhile-mixin
+                                 (type-check-Cif-mixin
+                                  (type-check-Cvar-mixin
+                                   type-check-Rwhile-class))))
 
 (define (type-check-Cwhile p)
   (send (new type-check-Cwhile-class) type-check-program p))
