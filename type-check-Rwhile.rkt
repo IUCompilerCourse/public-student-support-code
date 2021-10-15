@@ -47,6 +47,7 @@
              (for/lists (l1 l2) ([e es]) (recur e)))
            (define-values (body^ Tbody) (recur body))
            (values (Begin es^ body^) Tbody)]
+          [(Void) (values (Void) 'Void)]
           [else ((super type-check-exp env) e)])))
     ))
 
