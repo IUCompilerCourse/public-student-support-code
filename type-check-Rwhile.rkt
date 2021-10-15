@@ -2,7 +2,6 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require (only-in "conditionals.rkt" compile-Rif))
 (require "type-check-Rif.rkt")
 (require "type-check-Cif.rkt")
 (provide type-check-Rwhile type-check-Rwhile-class)
