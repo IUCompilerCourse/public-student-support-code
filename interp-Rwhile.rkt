@@ -31,6 +31,7 @@
         [(Begin es body)
          (for ([e es]) (recur e))
          (recur body)]
+        [(Void)  (void)]
         [else ((super interp-exp env) e)]))
       (verbose "Rwhile/interp-exp" e result)
       result)
