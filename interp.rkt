@@ -248,7 +248,7 @@
     (field [x86-ops (make-immutable-hash
 		     `((addq 2 ,+)
 		       (imulq 2 ,*)
-		       (subq 2 ,(lambda (d s) (- d s)))
+		       (subq 2 ,(lambda (s d) (- d s)))
 		       (negq 1 ,-)))])
 
     (define/public (interp-x86-op op)
@@ -299,7 +299,7 @@
 		  [d ((interp-x86-exp env) d)]
 		  [x (get-name d)]
 		  [f (interp-x86-op binary-op)])
-              (let ([v (f d s)])
+              (let ([v (f s d)])
                 (copious "binary-op result " (observe-value v))
                 ((interp-x86-instr (cons (cons x v) env)) ss)))]
 	   [(cons (Instr unary-op (list d)) ss)

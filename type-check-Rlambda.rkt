@@ -20,6 +20,7 @@
   (class type-check-Rfun-class
     (super-new)
     (inherit check-type-equal?)
+    (inherit-field max-parameters)
     
     ;; lenient type checking for '_
     (define/override (type-equal? t1 t2)
@@ -72,6 +73,9 @@
            (let ([t (dict-ref env f)])
              (values (FunRefArity f n) t))]
           [(Lambda (and params `([,xs : ,Ts] ...)) rT body)
+           (unless (< (length xs) max-parameters)
+             (error 'type-check "lambda has too many parameters, max is ~a"
+                    max-parameters))
            (define-values (new-body bodyT) 
              ((type-check-exp (append (map cons xs Ts) env)) body))
            (define ty `(,@Ts -> ,rT))

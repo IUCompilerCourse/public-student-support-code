@@ -68,6 +68,7 @@
 
     (define/override (type-check-exp env)
       (lambda (e)
+        (debug 'type-check-exp "Rany" e)
         (define recur (type-check-exp env))
         (match e
           ;; Change If to use combine-types

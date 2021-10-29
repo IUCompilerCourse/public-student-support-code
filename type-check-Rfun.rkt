@@ -17,6 +17,8 @@
     (super-new)
     (inherit check-type-equal?)
 
+    (field [max-parameters 32])
+    
     (define/public (type-check-apply env e es)
       (define-values (e^ ty) ((type-check-exp env) e))
       (define-values (e* ty*) (for/lists (e* ty*) ([e (in-list es)])
@@ -46,6 +48,9 @@
       (lambda (e)
         (match e
           [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info body)
+           (unless (< (length xs) max-parameters)
+             (error 'type-check "~a has too many parameters, max is ~a"
+                    f max-parameters))
            (define new-env (append (map cons xs ps) env))
            (define-values (body^ ty^) ((type-check-exp new-env) body))
            (check-type-equal? ty^ rt body)

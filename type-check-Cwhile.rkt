@@ -67,6 +67,7 @@
         (dict-has-key? env x)))
 
     (define (update-type x t env)
+      (debug 'update-type x t)
       (cond [(dict-has-key? env x)
              (define old-t (dict-ref env x))
              (unless (type-equal? t old-t)
