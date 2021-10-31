@@ -3,6 +3,7 @@
 (require "interp-Rvec-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
+(require "interp-Cwhile.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
 (provide interp-Cvec interp-Cvec-mixin)
 
@@ -50,8 +51,9 @@
 
 (define (interp-Cvec p)
   (define Cvec-class (interp-Cvec-mixin
-                      (interp-Cif-mixin
-                       (interp-Cvar-mixin
-                        interp-Rvec-prime-class))))
+                      (interp-Cwhile-mixin
+                       (interp-Cif-mixin
+                        (interp-Cvar-mixin
+                         interp-Rvec-prime-class)))))
   (send (new Cvec-class) interp-program p))
 

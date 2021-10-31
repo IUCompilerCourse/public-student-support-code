@@ -25,12 +25,12 @@
 (define/override (type-check-def global-env)
   (lambda (d)
     (match d
-      [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info CFG)
+      [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info blocks)
        (define new-env (append (map cons xs ps) global-env))
        (define env (make-hash new-env))
        (define block-env (make-hash))
-       (define t ((type-check-tail env block-env CFG)
-                  (dict-ref CFG (symbol-append f 'start))))
+       (define t ((type-check-tail env block-env blocks)
+                  (dict-ref blocks (symbol-append f 'start))))
        (unless (type-equal? t rt)
          (error 'type-check "mismatch in return type, ~a != ~a" t rt))
        (define locals-types
@@ -38,7 +38,7 @@
                     #:when (not (dict-has-key? global-env x)))
            (cons x t)))
        (define new-info (dict-set info 'locals-types locals-types))
-       (Def f p:t* rt new-info CFG)]
+       (Def f p:t* rt new-info blocks)]
       )))
 
 ))

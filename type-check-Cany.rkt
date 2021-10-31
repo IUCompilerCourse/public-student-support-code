@@ -17,17 +17,17 @@
     (super-new)
     (inherit type-check-exp check-type-equal? combine-types)
   
-  (define/override ((type-check-tail env block-env G) t)
+  (define/override ((type-check-tail env block-env blocks) t)
     (match t
       [(IfStmt cnd tail1 tail2)
        (define-values (c Tc) ((type-check-exp env) cnd))
        (check-type-equal? Tc 'Boolean t)
-       (define T1 ((type-check-tail env block-env G) tail1))
-       (define T2 ((type-check-tail env block-env G) tail2))
+       (define T1 ((type-check-tail env block-env blocks) tail1))
+       (define T2 ((type-check-tail env block-env blocks) tail2))
        (check-type-equal? T1 T2 t)
        (combine-types T1 T2)]
       [(Exit) '_]
-      [else ((super type-check-tail env block-env G) t)]))
+      [else ((super type-check-tail env block-env blocks) t)]))
   ))
 
 (define type-check-Cany-class (type-check-Cany-mixin

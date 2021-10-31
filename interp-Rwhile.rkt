@@ -21,6 +21,7 @@
          (define new-env (dict-set env x (box (recur e))))
          ((interp-exp new-env) body)]
         [(Var x) (unbox (dict-ref env x))]
+        [(GetBang x) (unbox (dict-ref env x))]
         [(SetBang x rhs)
          (set-box! (lookup x env) (recur rhs))]
         [(WhileLoop cnd body)

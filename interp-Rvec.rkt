@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Rif.rkt")
+(require "interp-Rwhile.rkt")
 (provide interp-Rvec interp-Rvec-class)
 
 ;; Note to maintainers of this code:
@@ -9,7 +9,7 @@
 ;;   kept in sync with this code.
 
 (define interp-Rvec-class
-  (class interp-Rif-class
+  (class interp-Rwhile-class
     (super-new)
 
     (define/override (interp-op op)
@@ -33,7 +33,6 @@
       (verbose "Rvec/interp-exp" e)
       (match e
         [(HasType e t)  (recur e)]
-        [(Void)  (void)]
         [else ((super interp-exp env) e)]
         ))
     ))

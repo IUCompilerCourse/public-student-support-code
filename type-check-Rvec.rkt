@@ -21,6 +21,8 @@
         (define recur (type-check-exp env))
         (match e
           [(Prim 'vector es)
+           (unless (<= (length es) 50)
+             (error 'type-check "vector too large ~a, max is 50" (length es)))
            (define-values (e* t*) (for/lists (e* t*) ([e es]) (recur e)))
            (define t `(Vector ,@t*))
            (values (HasType (Prim 'vector e*) t)  t)]

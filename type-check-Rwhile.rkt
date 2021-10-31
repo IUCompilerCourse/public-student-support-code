@@ -37,6 +37,8 @@
            (define varT (dict-ref env x))
            (check-type-equal? rhsT varT e)
            (values (SetBang x rhs^) 'Void)]
+          [(GetBang x)
+           (values (GetBang x) (dict-ref env x))]
           [(WhileLoop cnd body)
            (define-values (cnd^ Tc) (recur cnd))
            (check-type-equal? Tc 'Boolean e)
