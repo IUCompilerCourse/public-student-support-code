@@ -83,6 +83,7 @@ Changelog:
          (struct-out X86Program)
          (contract-out [struct WhileLoop ((cnd exp?) (body exp?))])
          (contract-out [struct SetBang ((var symbol?) (rhs exp?))])
+         (contract-out [struct GetBang ((var symbol?))])
          (contract-out [struct Begin ((es exp-list?) (body exp?))])
          (contract-out [struct Bool ((value boolean?))])
          (contract-out [struct If ((cnd exp?) (thn exp?) (els exp?))])
@@ -407,6 +408,26 @@ Changelog:
                        (newline-and-indent port col)
                        (write-string "   " port) ;; indent body
                        (recur rhs port)
+                       (write-string ")" port)
+                       )]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
+(struct GetBang (var)  #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'GetBang)
+                 (lambda (obj) (list (GetBang-var obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(GetBang var)
+                     (let-values ([(line col pos) (port-next-location port)])
+                       (write-string "(get! " port)
+                       (write-string (symbol->string var) port)
                        (write-string ")" port)
                        )]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
@@ -1465,6 +1486,7 @@ Changelog:
     [(Closure arity fvs) #t]
     [(WhileLoop cnd body) #t]
     [(SetBang x rhs) #t]
+    [(GetBang x) #t]
     [(Begin es body) #t]
     [(Value v) #t]
     [(Inst e ty ts) #t]
@@ -1667,6 +1689,7 @@ Changelog:
         [(Imm n) (format "$~a" n)]
         [(Reg r) (format "%~a" r)]
         [(ByteReg r) (format "%~a" r)]
+        [(Global label) (format "~a(%rip)" (label-name label))]
         ))
     
     (define/public (print-x86-instr e)
