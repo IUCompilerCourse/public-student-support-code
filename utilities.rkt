@@ -1799,6 +1799,10 @@ Changelog:
          (format "\t~a\t~a\n" instr-name (print-x86-imm d))]
         [(Retq)
          "\tretq\n"]
+        [(Pushq s)
+         (format "\tpushq\t~a\n" (print-x86-imm s))]
+        [(Popq d)
+         (format "\tpopq\t~a\n" (print-x86-imm d))]
         [(JmpIf cc label) (format "\tj~a ~a\n" cc (label-name label))]
         [else (error "print-x86-instr, unmatched" e)]))
     
