@@ -13,7 +13,7 @@
 #lang racket
 (require racket/struct)
 
-;; Version 0.2
+;; Version 0.4
 ;; ---------------------
 #|
 
@@ -136,6 +136,8 @@ Changelog:
          (contract-out [struct IndirectCallq ((target arg?) (arity fixnum?))])
          (contract-out [struct IndirectJmp ((target arg?))])
          (struct-out Retq)
+         (contract-out [struct Pushq ((reg arg?))])
+         (contract-out [struct Popq ((reg arg?))])
          (contract-out [struct Jmp ((target symbol?))])
          (contract-out [struct TailJmp ((target arg?) (arity fixnum?))])
          (contract-out [struct Block ((info any?) (instr* instr-list?))])
@@ -1346,6 +1348,46 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
+(struct Pushq (reg) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'Pushq)
+                 (lambda (obj) (list (Pushq-reg obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(Pushq reg)
+                     (let-values ([(line col pos) (port-next-location port)])
+                       (write-string "pushq" port)
+                       (write-string " " port)
+                       (recur reg port)
+                       (newline-and-indent port col))]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
+(struct Popq (reg) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'Popq)
+                 (lambda (obj) (list (Popq-reg obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(Popq reg)
+                     (let-values ([(line col pos) (port-next-location port)])
+                       (write-string "popq" port)
+                       (write-string " " port)
+                       (recur reg port)
+                       (newline-and-indent port col))]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
 (struct IndirectCallq (target arity) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
@@ -1638,6 +1680,8 @@ Changelog:
     [(Instr name arg*) #t]
     [(Callq label n) #t]
     [(Retq) #t]
+    [(Pushq arg) #t]
+    [(Popq arg) #t]
     [(IndirectCallq a n) #t]
     [(Jmp label) #t]
     [(IndirectJmp target) #t]
