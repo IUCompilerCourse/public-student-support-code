@@ -15,7 +15,12 @@
     (define/override (interp-stmt env)
       (lambda (s)
         (match s
-          [(Assign (Var x) e)
+          [(Call e es)
+           (define f-val ((interp-exp env) e))
+           (define arg-vals (map (interp-exp env) es))
+           (call-function f-val arg-vals s)
+           env]
+          #;[(Assign (Var x) e)
            (dict-set env x (box ((interp-exp env) e)))]
           [else ((super interp-stmt env) s)]
           )))

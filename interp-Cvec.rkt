@@ -16,6 +16,13 @@
       (lambda (ast)
         (copious "interp-stmt" ast)
         (match ast
+          [(Prim 'vector-set! (list e-vec i e-arg))
+           ((interp-exp env) ast)
+           env]
+          ;; TODO: move the following to the interpreter for any
+          #;[(Prim 'any-vector-set! (list e-vec i e-arg))
+           ((interp-exp env) ast)
+           env]
 	  ;; Determine if a collection is needed.
 	  ;; Which it isn't because vectors stored in the environment
 	  ;; is the representation of the heap in the C language,
