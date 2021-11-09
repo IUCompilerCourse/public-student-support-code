@@ -3,6 +3,7 @@
 (require "interp-Rfun-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
+(require "interp-Cwhile.rkt")
 (require "interp-Cvec.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
 (provide interp-Cfun interp-Cfun-mixin)
@@ -79,8 +80,10 @@
     ))
 
 (define (interp-Cfun p)
-  (define Cfun-class (interp-Cfun-mixin (interp-Cvec-mixin
-                                     (interp-Cif-mixin
-                                      (interp-Cvar-mixin
-                                       interp-Rfun-prime-class)))))
+  (define Cfun-class (interp-Cfun-mixin
+                      (interp-Cvec-mixin
+                       (interp-Cwhile-mixin
+                        (interp-Cif-mixin
+                         (interp-Cvar-mixin
+                          interp-Rfun-prime-class))))))
   (send (new Cfun-class) interp-program p))
