@@ -12,8 +12,16 @@
 (define (type-check-Cvec-mixin super-class)
   (class super-class
     (super-new)
-    (inherit check-type-equal?)
+    (inherit check-type-equal? exp-ready?)
 
+    (define/override (free-vars-exp e)
+      (define (recur e) (send this free-vars-exp e))
+      (match e
+        [(HasType e t) (recur e)]
+        [(Allocate size ty) (set)]
+        [(GlobalValue name) (set)]
+        [else (super free-vars-exp e)]))
+        
     (define/override (type-check-exp env)
       (lambda (e)
         (debug 'type-check-exp "Cvec" e)
@@ -67,7 +75,12 @@
     (define/override ((type-check-stmt env) s)
       (match s
         [(Collect size) (void)]
+        [(Prim 'vector-set! (list vec index rhs))
+         #:when (and (exp-ready? vec env) (exp-ready? index env)
+                     (exp-ready? rhs env))
+         ((type-check-exp env) s)]
         [else ((super type-check-stmt env) s)]))
+    
     ))
 
 (define type-check-Cvec-class (type-check-Cvec-mixin

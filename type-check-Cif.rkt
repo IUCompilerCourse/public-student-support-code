@@ -12,8 +12,15 @@
     (super-new)
     (inherit check-type-equal?)
 
+    (define/override ((type-check-atm env) e)
+      (match e
+        [(Bool b) (values (Bool b) 'Boolean)]
+        [else
+         ((super type-check-atm env) e)]
+        ))
+    
     (define/override ((type-check-exp env) e)
-      (debug 'type-check-exp "Cvar ~a" e)
+      (debug 'type-check-exp "Cif ~a" e)
       (match e
         [(Bool b) (values (Bool b) 'Boolean)]
         [(Prim 'eq? (list e1 e2))

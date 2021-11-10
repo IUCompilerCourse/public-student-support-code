@@ -89,9 +89,10 @@ Changelog:
          (contract-out [struct If ((cnd exp?) (thn exp?) (els exp?))])
          (contract-out [struct HasType ((expr exp?) (type type?))])
          (struct-out Void)
+         (contract-out [struct StructDef ((name symbol?) (field* param-list?))])
          (contract-out [struct Apply ((fun exp?) (arg* exp-list?))])
          (contract-out [struct Def ((name symbol?) (param* param-list?) (rty type?) (info any?)
-                                    (body any?))])
+                                                   (body any?))])
          (contract-out [struct Lambda ((param* param-list?) (rty type?) (body exp?))])
          (contract-out [struct FunRef ((name symbol?))])
          (contract-out [struct FunRefArity ((name symbol?) (arity fixnum?))])
@@ -133,6 +134,7 @@ Changelog:
          (contract-out [struct Instr ((name symbol?) (arg* arg-list?))])
          (contract-out [struct Callq ((target symbol?) (arity fixnum?))])
          (contract-out [struct IndirectCallq ((target arg?) (arity fixnum?))])
+         (contract-out [struct IndirectJmp ((target arg?))])
          (struct-out Retq)
          (contract-out [struct Jmp ((target symbol?))])
          (contract-out [struct TailJmp ((target arg?) (arity fixnum?))])
@@ -787,6 +789,8 @@ Changelog:
                        (write-string " " port)
                        (write-type rty port)
                        (newline-and-indent port col)
+                       (print-info info port mode)
+                       (newline-and-indent port col)
                        (write-string "   " port)
                        (cond [(list? body)
                               (for ([block body])
@@ -806,6 +810,28 @@ Changelog:
                               (recur body port)])
                        (newline-and-indent port col)            
                        (write-string ")" port)
+                       )]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
+(struct StructDef (name field*) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'StructDef)
+                 (lambda (obj) (list (StructDef-name obj) (StructDef-field* obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(StructDef name ps)
+                     (let-values ([(line col pos) (port-next-location port)])
+                       (write-string "(struct " port)
+                       (write-string (symbol->string name) port)
+                       (write-string "(" port)
+                       (write-params ps port)
+                       (write-string "))" port)
                        )]))]
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]
@@ -1333,6 +1359,19 @@ Changelog:
             (recur target port)
             (newline-and-indent port col))])))])
 
+(struct IndirectJmp (target) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define (write-proc ast port mode)
+     (let ([recur (make-recur port mode)])
+       (match ast
+         [(IndirectJmp target)
+          (let-values ([(line col pos) (port-next-location port)])
+            (write-string "jmp" port)
+            (write-string " " port)
+            (write-string "*" port)
+            (recur target port)
+            (newline-and-indent port col))])))])
+
 (struct Jmp (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
@@ -1584,6 +1623,7 @@ Changelog:
     [(Retq) #t]
     [(IndirectCallq a n) #t]
     [(Jmp label) #t]
+    [(IndirectJmp target) #t]
     [(TailJmp a n) #t]
     [(JmpIf c t) #t]
     [else #f]
@@ -1645,6 +1685,8 @@ Changelog:
      (Def f ps rty '() (parse-exp body))]
     [`(define (,f ,xs ...) ,body) ;; dynamically typed definition
      (Def f xs 'Any '() (parse-exp body))]
+    [`(struct ,name ,fields #:mutable)
+     (StructDef name fields)]    
     [`(: ,name ,type)
      (Decl name type)]
     ))
@@ -1690,6 +1732,7 @@ Changelog:
         [(Reg r) (format "%~a" r)]
         [(ByteReg r) (format "%~a" r)]
         [(Global label) (format "~a(%rip)" (label-name label))]
+        [(FunRef fun) (format "~a(%rip)" (label-name fun))]
         ))
     
     (define/public (print-x86-instr e)
@@ -1697,7 +1740,10 @@ Changelog:
       (match e
         [(Callq f n)
          (format "\tcallq\t~a\n" (label-name (symbol->string f)))]
+        [(IndirectCallq f n)
+         (format "\tcallq\t*~a\n" (print-x86-imm f))]
         [(Jmp label) (format "\tjmp ~a\n" (label-name label))]
+        [(IndirectJmp target) (format "\tjmp *~a\n" (print-x86-imm target))]
         [(Instr 'set (list cc d)) (format "\tset~a\t~a\n" cc (print-x86-imm d))]
         [(Instr 'cmpq (list s1 s2))
          (format "\tcmpq\t~a, ~a\n" (print-x86-imm s1) (print-x86-imm s2))]
@@ -1728,8 +1774,11 @@ Changelog:
               (if (eq? label 'main)
                   (format "\t.globl ~a\n" (label-name 'main))
                   "")
-              (string-append (format "~a:\n" (label-name label))
-                             (print-x86-block block)))))
+              (string-append
+               "\t.align 16\n"
+               (format "~a:\n" (label-name label))
+               (print-x86-block block)
+               "\n"))))
           "\n"
           )]
         [else (error "print-x86, unmatched" e)]
