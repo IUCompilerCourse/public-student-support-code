@@ -14,7 +14,7 @@
 ;; The interpreters in this file are for the intermediate languages
 ;; produced by the various passes of the compiler.
 ;; 
-;; The interpreters for the source languages (Rvar, Rif, ...)
+;; The interpreters for the source languages (Lvar, Lif, ...)
 ;; and the C intermediate languages Cvar and Cif
 ;; are in separate files, e.g., interp-Rvar.rkt.
 

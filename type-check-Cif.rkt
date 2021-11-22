@@ -1,7 +1,7 @@
 #lang racket
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
-(require "type-check-Rif.rkt")
+(require "type-check-Lif.rkt")
 (provide type-check-Cif type-check-Cif-class type-check-Cif-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -55,7 +55,7 @@
 
 (define type-check-Cif-class (type-check-Cif-mixin
                              (type-check-Cvar-mixin
-                              type-check-Rif-class)))
+                              type-check-Lif-class)))
 
 (define (type-check-Cif p)
   (send (new type-check-Cif-class) type-check-program p))

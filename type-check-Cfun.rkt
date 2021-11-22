@@ -4,7 +4,7 @@
 (require "type-check-Cif.rkt")
 (require "type-check-Cwhile.rkt")
 (require "type-check-Cvec.rkt")
-(require "type-check-Rfun.rkt")
+(require "type-check-Lfun.rkt")
 (provide type-check-Cfun type-check-Cfun-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,7 +91,7 @@
                                 (type-check-Cwhile-mixin
                                  (type-check-Cif-mixin
                                   (type-check-Cvar-mixin
-                                   type-check-Rfun-class))))))
+                                   type-check-Lfun-class))))))
 
 (define (type-check-Cfun p)
   (send (new type-check-Cfun-class) type-check-program p))

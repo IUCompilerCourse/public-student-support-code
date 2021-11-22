@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rvec-prime.rkt")
+(require "interp-Lvec-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
 (require "interp-Cwhile.rkt")
@@ -61,6 +61,6 @@
                       (interp-Cwhile-mixin
                        (interp-Cif-mixin
                         (interp-Cvar-mixin
-                         interp-Rvec-prime-class)))))
+                         interp-Lvec-prime-class)))))
   (send (new Cvec-class) interp-program p))
 

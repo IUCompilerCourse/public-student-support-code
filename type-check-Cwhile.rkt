@@ -2,7 +2,7 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Rwhile.rkt")
+(require "type-check-Lwhile.rkt")
 (require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
 (provide type-check-Cwhile type-check-Cwhile-mixin type-check-Cwhile-class)
@@ -225,7 +225,7 @@
 (define type-check-Cwhile-class (type-check-Cwhile-mixin
                                  (type-check-Cif-mixin
                                   (type-check-Cvar-mixin
-                                   type-check-Rwhile-class))))
+                                   type-check-Lwhile-class))))
 
 (define (type-check-Cwhile p)
   (send (new type-check-Cwhile-class) type-check-program p))

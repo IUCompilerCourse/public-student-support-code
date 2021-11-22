@@ -1,30 +1,23 @@
 #lang racket
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
-(require "type-check-Cif.rkt")
-(require "type-check-Cwhile.rkt")
-(require "type-check-Lvec.rkt")
-(provide type-check-Cvec type-check-Cvec-mixin)
+(require "type-check-Lwhile.rkt")
+(provide type-check-Lvec type-check-Lvec-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Cvec
+;;  Tuples (aka Vectors)                                                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (type-check-Cvec-mixin super-class)
-  (class super-class
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; type-check-Lvec
+
+(define type-check-Lvec-class
+  (class type-check-Lwhile-class
     (super-new)
-    (inherit check-type-equal? exp-ready?)
+    (inherit check-type-equal?)
 
-    (define/override (free-vars-exp e)
-      (define (recur e) (send this free-vars-exp e))
-      (match e
-        [(HasType e t) (recur e)]
-        [(Allocate size ty) (set)]
-        [(GlobalValue name) (set)]
-        [else (super free-vars-exp e)]))
-        
     (define/override (type-check-exp env)
       (lambda (e)
-        (debug 'type-check-exp "Cvec" e)
         (define recur (type-check-exp env))
         (match e
           [(Prim 'vector es)
@@ -64,33 +57,28 @@
              [(`(Vector ,ts1 ...)  `(Vector ,ts2 ...))  (void)]
              [(other wise)  (check-type-equal? t1 t2 e)])
            (values (Prim 'eq? (list e1 e2)) 'Boolean)]
+          [(HasType (Prim 'vector es) t)
+           ((type-check-exp env) (Prim 'vector es))]
+          [(HasType e1 t)
+           (define-values (e1^ t^) (recur e1))
+           (check-type-equal? t t^ e)
+           (values (HasType e1^ t) t)]
           [(GlobalValue name)
            (values (GlobalValue name) 'Integer)]
           [(Allocate size t)
            (values (Allocate size t) t)]
           [(Collect size)
            (values (Collect size) 'Void)]
-          [else ((super type-check-exp env) e)])))
-    
-    (define/override ((type-check-stmt env) s)
-      (match s
-        [(Collect size) (void)]
-        [(Prim 'vector-set! (list vec index rhs))
-         #:when (and (exp-ready? vec env) (exp-ready? index env)
-                     (exp-ready? rhs env))
-         ((type-check-exp env) s)]
-        [else ((super type-check-stmt env) s)]))
-    
+          [else ((super type-check-exp env) e)]
+          )))
     ))
 
-(define type-check-Cvec-class (type-check-Cvec-mixin
-                               (type-check-Cwhile-mixin
-                                (type-check-Cif-mixin
-                                 (type-check-Cvar-mixin
-                                  type-check-Lvec-class)))))
+(define (type-check-Lvec p)
+  (send (new type-check-Lvec-class) type-check-program p))
 
-(define (type-check-Cvec p)
-  (send (new type-check-Cvec-class) type-check-program p))
+#;(define (type-check-exp env)
+  (send (new type-check-Lvec-class) type-check-exp env))
 
+#;(define (type-equal? t1 t2)
+  (send (new type-check-Lvec-class) type-equal? t1 t2))
 
-  

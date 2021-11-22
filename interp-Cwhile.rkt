@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rwhile.rkt")
+(require "interp-Lwhile.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
 (provide interp-Cwhile interp-Cwhile-mixin)
@@ -28,7 +28,7 @@
 (define Cwhile-class (interp-Cwhile-mixin
                      (interp-Cif-mixin
                       (interp-Cvar-mixin
-                       interp-Rwhile-class))))
+                       interp-Lwhile-class))))
 
 (define (interp-Cwhile p)
   (send (new Cwhile-class) interp-program p))

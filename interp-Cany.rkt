@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rany-prime.rkt")
+(require "interp-Lany-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
 (require "interp-Cvec.rkt")
@@ -13,7 +13,7 @@
                    (interp-Cvec-mixin
                     (interp-Cif-mixin
                      (interp-Cvar-mixin
-                      interp-Rany-prime-class))))))
+                      interp-Lany-prime-class))))))
 
 (define (interp-Cany p)
   (send (new Cany-class) interp-program p))

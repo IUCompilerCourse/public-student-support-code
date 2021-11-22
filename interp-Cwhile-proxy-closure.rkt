@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rwhile-proxy-closure.rkt")
+(require "interp-Lwhile-proxy-closure.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
 (require "interp-Cvec.rkt")
@@ -15,7 +15,7 @@
                     (interp-Cvec-mixin
                      (interp-Cif-mixin
                       (interp-Cvar-mixin
-                       interp-Rwhile-proxy-closure-class)))))))
+                       interp-Lwhile-proxy-closure-class)))))))
 
 (define (interp-Cwhile-proxy-closure p)
   (send (new Cwhile-class) interp-program p))

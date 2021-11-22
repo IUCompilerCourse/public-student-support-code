@@ -2,10 +2,10 @@
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
-(require "type-check-Rvec.rkt")
+(require "type-check-Lvec.rkt")
 (require "type-check-Cvec.rkt")
 (require "type-check-Cfun.rkt")
-(require "type-check-Rany.rkt")
+(require "type-check-Lany.rkt")
 (provide type-check-Cany type-check-Cany-mixin type-check-Cany-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -35,7 +35,7 @@
                                 (type-check-Cvec-mixin
                                  (type-check-Cif-mixin
                                   (type-check-Cvar-mixin
-                                   type-check-Rany-class))))))
+                                   type-check-Lany-class))))))
 
 (define (type-check-Cany p)
   (send (new type-check-Cany-class) type-check-program p))
