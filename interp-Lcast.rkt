@@ -2,9 +2,9 @@
 ;(require racket/fixnum)
 (require "utilities.rkt")
 (require "interp-Lwhile.rkt")
-(provide interp-Rcast interp-Rcast-class)
+(provide interp-Lcast interp-Lcast-class)
 
-(define interp-Rcast-class
+(define interp-Lcast-class
   (class interp-Lwhile-class
     (super-new)
     (inherit apply-fun apply-inject apply-project)
@@ -32,7 +32,7 @@
         [else (vector-length vec)]))
 
     (define/override (interp-op op)
-      (verbose "Rcast/interp-op" op)
+      (verbose "Lcast/interp-op" op)
       (match op
         ['vector-length guarded-vector-length]
         ['vector-ref guarded-vector-ref]
@@ -94,18 +94,18 @@
     
     (define/override ((interp-exp env) e)
       (define (recur e) ((interp-exp env) e))
-      (verbose "Rcast/interp-exp" e)
+      (verbose "Lcast/interp-exp" e)
       (define result
         (match e
           [(Value v) v]
           [(Cast e src tgt)
            (apply-cast (recur e) src tgt)]
           [else ((super interp-exp env) e)]))
-      (verbose "Rcast/interp-exp" e result)
+      (verbose "Lcast/interp-exp" e result)
       result)
     
     ))
 
-(define (interp-Rcast p)
-  (send (new interp-Rcast-class) interp-program p))
+(define (interp-Lcast p)
+  (send (new interp-Lcast-class) interp-program p))
 
