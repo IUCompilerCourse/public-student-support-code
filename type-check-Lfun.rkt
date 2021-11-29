@@ -1,22 +1,24 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Rvec.rkt")
-(provide type-check-Rfun type-check-Rfun-class)
+(require "type-check-Lvec.rkt")
+(provide type-check-Lfun type-check-Lfun-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Functions                                                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rfun
+;; type-check-Lfun
 
 ;; TODO: Don't allow eq? on function types. -Jeremy
 
-(define type-check-Rfun-class
-  (class type-check-Rvec-class
+(define type-check-Lfun-class
+  (class type-check-Lvec-class
     (super-new)
     (inherit check-type-equal?)
 
+    (field [max-parameters 32])
+    
     (define/public (type-check-apply env e es)
       (define-values (e^ ty) ((type-check-exp env) e))
       (define-values (e* ty*) (for/lists (e* ty*) ([e (in-list es)])
@@ -46,6 +48,9 @@
       (lambda (e)
         (match e
           [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info body)
+           (unless (< (length xs) max-parameters)
+             (error 'type-check "~a has too many parameters, max is ~a"
+                    f max-parameters))
            (define new-env (append (map cons xs ps) env))
            (define-values (body^ ty^) ((type-check-exp new-env) body))
            (check-type-equal? ty^ rt body)
@@ -79,6 +84,6 @@
         [else (error 'type-check "unrecognized ~a" e)]))
     ))
 
-(define (type-check-Rfun p)
-  (send (new type-check-Rfun-class) type-check-program p))
+(define (type-check-Lfun p)
+  (send (new type-check-Lfun-class) type-check-program p))
 

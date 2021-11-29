@@ -1,19 +1,19 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Rif.rkt")
-(provide interp-Rvec interp-Rvec-class)
+(require "interp-Lwhile.rkt")
+(provide interp-Lvec interp-Lvec-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Rvec-class
-  (class interp-Rif-class
+(define interp-Lvec-class
+  (class interp-Lwhile-class
     (super-new)
 
     (define/override (interp-op op)
-      (verbose "Rvec/interp-op" op)
+      (verbose "Lvec/interp-op" op)
       (match op
         ['eq? (lambda (v1 v2)
                 (cond [(or (and (fixnum? v1) (fixnum? v2))
@@ -30,13 +30,12 @@
 
     (define/override ((interp-exp env) e)
       (define recur (interp-exp env))
-      (verbose "Rvec/interp-exp" e)
+      (verbose "Lvec/interp-exp" e)
       (match e
         [(HasType e t)  (recur e)]
-        [(Void)  (void)]
         [else ((super interp-exp env) e)]
         ))
     ))
 
-(define (interp-Rvec p)
-  (send (new interp-Rvec-class) interp-program p))
+(define (interp-Lvec p)
+  (send (new interp-Lvec-class) interp-program p))

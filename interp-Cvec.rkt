@@ -1,8 +1,9 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rvec-prime.rkt")
+(require "interp-Lvec-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
+(require "interp-Cwhile.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
 (provide interp-Cvec interp-Cvec-mixin)
 
@@ -15,6 +16,13 @@
       (lambda (ast)
         (copious "interp-stmt" ast)
         (match ast
+          [(Prim 'vector-set! (list e-vec i e-arg))
+           ((interp-exp env) ast)
+           env]
+          ;; TODO: move the following to the interpreter for any
+          #;[(Prim 'any-vector-set! (list e-vec i e-arg))
+           ((interp-exp env) ast)
+           env]
 	  ;; Determine if a collection is needed.
 	  ;; Which it isn't because vectors stored in the environment
 	  ;; is the representation of the heap in the C language,
@@ -50,8 +58,9 @@
 
 (define (interp-Cvec p)
   (define Cvec-class (interp-Cvec-mixin
-                      (interp-Cif-mixin
-                       (interp-Cvar-mixin
-                        interp-Rvec-prime-class))))
+                      (interp-Cwhile-mixin
+                       (interp-Cif-mixin
+                        (interp-Cvar-mixin
+                         interp-Lvec-prime-class)))))
   (send (new Cvec-class) interp-program p))
 

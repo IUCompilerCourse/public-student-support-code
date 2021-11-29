@@ -1,10 +1,10 @@
 #lang racket
-(require "interp-Rvec.rkt")
+(require "interp-Lvec.rkt")
 (require "utilities.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Rvec-prime interp-Rvec-prime-mixin interp-Rvec-prime-class)
+(provide interp-Lvec-prime interp-Lvec-prime-mixin interp-Lvec-prime-class)
 
-(define (interp-Rvec-prime-mixin super-class)
+(define (interp-Lvec-prime-mixin super-class)
   (class super-class
     (super-new)
 
@@ -33,7 +33,7 @@
 	(let-values ([(start stop name vect) (fetch-page addr)])
 	  (let ([value (vector-ref vect (arithmetic-shift (- addr start) -3))])
 	    (when (equal? value uninitialized)
-	      (error 'interp-Rvec-class/memory-read
+	      (error 'interp-Lvec-class/memory-read
 		     "read uninitialized memory at address ~s"
 		     addr))
 	    value))))
@@ -124,9 +124,9 @@
         (match m
           [`() (error 'fetch-page (fmt-err addr memory))]
           [`((page ,min ,max ,name ,vect) . ,rest-memory)
-           ;(copious "Rvec/fetch page" addr min max name vect)
+           ;(copious "Lvec/fetch page" addr min max name vect)
            ; vect is too large to print, makes things hard to read.
-           ;(copious "Rvec/fetch page" addr min max name)
+           ;(copious "Lvec/fetch page" addr min max name)
            (if (and (<= min addr) (< addr max))
                (values min max name vect)
                (search rest-memory))]
@@ -164,7 +164,7 @@
         ))
     ))
 
-(define interp-Rvec-prime-class (interp-Rvec-prime-mixin interp-Rvec-class))
+(define interp-Lvec-prime-class (interp-Lvec-prime-mixin interp-Lvec-class))
     
-(define (interp-Rvec-prime p)
-  (send (new interp-Rvec-prime-class) interp-program p))
+(define (interp-Lvec-prime p)
+  (send (new interp-Lvec-prime-class) interp-program p))

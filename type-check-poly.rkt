@@ -1,11 +1,11 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Rwhile.rkt")
+(require "type-check-Lwhile.rkt")
 
 (provide type-check-poly type-check-poly-class)
 
 (define type-check-poly-class
-  (class type-check-Rwhile-class
+  (class type-check-Lwhile-class
     (super-new)
     (inherit check-type-equal?)
 

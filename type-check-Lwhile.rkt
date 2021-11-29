@@ -2,9 +2,9 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Rif.rkt")
+(require "type-check-Lif.rkt")
 (require "type-check-Cif.rkt")
-(provide type-check-Rwhile type-check-Rwhile-class)
+(provide type-check-Lwhile type-check-Lwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           while, begin, set!
@@ -12,10 +12,10 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rwhile
+;; type-check-Lwhile
 
-(define type-check-Rwhile-class
-  (class type-check-Rif-class
+(define type-check-Lwhile-class
+  (class type-check-Lif-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -29,7 +29,7 @@
     
     (define/override (type-check-exp env)
       (lambda (e)
-        (debug 'type-check-exp "Rwhile" e)
+        (debug 'type-check-exp "Lwhile" e)
         (define recur (type-check-exp env))
         (match e
           [(SetBang x rhs)
@@ -37,6 +37,8 @@
            (define varT (dict-ref env x))
            (check-type-equal? rhsT varT e)
            (values (SetBang x rhs^) 'Void)]
+          [(GetBang x)
+           (values (GetBang x) (dict-ref env x))]
           [(WhileLoop cnd body)
            (define-values (cnd^ Tc) (recur cnd))
            (check-type-equal? Tc 'Boolean e)
@@ -51,6 +53,6 @@
           [else ((super type-check-exp env) e)])))
     ))
 
-(define (type-check-Rwhile p)
-  (send (new type-check-Rwhile-class) type-check-program p))
+(define (type-check-Lwhile p)
+  (send (new type-check-Lwhile-class) type-check-program p))
 

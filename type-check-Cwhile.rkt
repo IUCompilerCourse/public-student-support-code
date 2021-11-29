@@ -2,7 +2,7 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Rwhile.rkt")
+(require "type-check-Lwhile.rkt")
 (require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
 (provide type-check-Cwhile type-check-Cwhile-mixin type-check-Cwhile-class)
@@ -24,15 +24,14 @@
         [(list t1 '_) t1]
         [else
          t1]))
-    
+
+    ;; TODO: move some things from here to later type checkers
     (define/public (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
         [(Var x) (set x)]
-        [(HasType e t) (recur e)]
         [(Int n) (set)]
         [(Bool b) (set)]
-        [(FunRef f) (set)]
         [(FunRefArity f n) (set)]
         [(Let x e body)
 	 (set-union (recur e) (set-remove (recur body) x))]
@@ -41,8 +40,6 @@
 	[(Lambda (list `[,xs : ,Ts] ...) rT body)
          (define (rm x s) (set-remove s x))
          (foldl rm (recur body) xs)]
-	[(Apply e es)
-	 (apply set-union (cons (recur e) (map recur es)))]
 	[(Prim op es)
 	 (apply set-union (cons (set) (map recur es)))]
         [(WhileLoop cnd body)
@@ -51,22 +48,20 @@
          (apply set-union (cons (recur e) (map recur es)))]
         [(SetBang x rhs) (set-union (set x) (recur rhs))]
         [(ValueOf e ty) (recur e)]
-        [(Exit) (set)]
+        ;[(Exit) (set)]
         ;; C-level expressions
         [(Void) (set)]
-        [(Allocate size ty) (set)]
         [(AllocateClosure len ty arity) (set)]
-        [(GlobalValue name) (set)]
-        [(Call f arg*) (apply set-union (cons (recur f) (map recur arg*)))]
 	[else (error 'free-vars-exp "unmatched ~a" e)]))
     
     (define type-changed #t)
 
-    (define (exp-ready? exp env)
+    (define/public (exp-ready? exp env)
       (for/and ([x (free-vars-exp exp)])
         (dict-has-key? env x)))
 
     (define (update-type x t env)
+      (debug 'update-type x t)
       (cond [(dict-has-key? env x)
              (define old-t (dict-ref env x))
              (unless (type-equal? t old-t)
@@ -82,6 +77,13 @@
              (set! type-changed #t)
              (dict-set! env x t)]))
 
+    (define/override ((type-check-atm env) e)
+      (match e
+        [(Void) (values (Void) 'Void)]
+        [else
+         ((super type-check-atm env) e)]
+        ))
+    
     (define/override (type-check-exp env)
       (lambda (e)
         (debug 'type-check-exp "Cwhile" e)
@@ -99,18 +101,8 @@
            (define-values (e^ t) ((type-check-exp env) e))
            (update-type x t env)]
           [(Assign (Var x) e) (void)]
-          [(Collect size) (void)]
-          [(Exit) (void)]
-          [(Prim 'vector-set! (list vec index rhs))
-           #:when (and (exp-ready? vec env) (exp-ready? index env)
-                       (exp-ready? rhs env))
-           ((type-check-exp env) s)]
+          ;[(Exit) (void)]
           [(Prim 'read '()) (void)]
-          #;[(Call e es)
-           #:when (and (exp-ready? e env)
-                       (for/and ([arg es]) (exp-ready? arg env)))
-           (define-values (e^ es^ rt) (type-check-apply env e es))
-           (void)]
           [else (void)]
           )))
 
@@ -142,13 +134,7 @@
              (error "type error: branches of if should have same type, not"
                     T1 T2))
            (combine-types T1 T2)]
-          #;[(TailCall f arg*)
-           #:when (and (exp-ready? f env)
-                       (for/and ([arg arg*]) (exp-ready? arg env)))
-           (define-values (f^ arg*^ rt) (type-check-apply env f arg*))
-           rt]
-          #;[(TailCall f arg*) '_]
-          [(Exit) '_]
+          ;[(Exit) '_]
           )))
 
     (define (adjacent-tail t)
@@ -200,43 +186,37 @@
            (Def f p:t* rt new-info blocks)]
           )))
 
-    #;(define/override (type-check-program p)
-      (match p
-        [(ProgramDefs info ds)
-         (define new-env (for/list ([d ds]) 
-                           (cons (Def-name d) (fun-def-type d))))
-         (define ds^ (for/list ([d ds])
-                       ((type-check-def new-env) d)))
-         (ProgramDefs info ds^)]))
-
+    (define/public (type-check-blocks info blocks env start)
+      (define block-env (make-hash))
+      (set! type-changed #t)
+      (define (iterate)
+        (cond [type-changed
+               (set! type-changed #f)
+               (for ([(label tail) (in-dict blocks)])
+                 (define t ((type-check-tail env block-env blocks) tail))
+                 (update-type label t block-env)
+                 )
+               (verbose "type-check-blocks" env block-env)
+               (iterate)]
+              [else (void)]))
+      (iterate)
+      (unless (dict-has-key? block-env start)
+        (error 'type-check-blocks "failed to infer type for ~a" start))
+      (define t (dict-ref block-env start))
+      (values env t))
+    
     (define/override (type-check-program p)
       (match p
         [(CProgram info blocks)
-         (define env (make-hash))
-         (define block-env (make-hash))
-         (set! type-changed #t)
-         (define (iterate)
-           (cond [type-changed
-                  (set! type-changed #f)
-                  (for ([(label tail) (in-dict blocks)])
-                    (define t ((type-check-tail env block-env blocks) tail))
-                    (update-type label t block-env)
-                    )
-                  (verbose "type-check-def" env block-env)
-                  (iterate)]
-                 [else (void)]))
-         (iterate)
-         
-         (define start 'start)
-         (unless (dict-has-key? block-env start)
-           (error 'type-check-def "failed to infer type for ~a" start))
-         (define t (dict-ref block-env start))
+         (define empty-env (make-hash))
+         (define-values (env t)
+           (type-check-blocks info blocks empty-env 'start))
+         (unless (type-equal? t 'Integer)
+           (error "return type of program must be Integer, not" t))
          (define locals-types
            (for/list ([(x t) (in-dict env)])
              (cons x t)))
          (define new-info (dict-set info 'locals-types locals-types))
-         (unless (type-equal? t 'Integer)
-           (error "return type of program must be Integer, not" t))
          (CProgram new-info blocks)]
         [else (super type-check-program p)]))
 
@@ -245,7 +225,7 @@
 (define type-check-Cwhile-class (type-check-Cwhile-mixin
                                  (type-check-Cif-mixin
                                   (type-check-Cvar-mixin
-                                   type-check-Rwhile-class))))
+                                   type-check-Lwhile-class))))
 
 (define (type-check-Cwhile p)
   (send (new type-check-Cwhile-class) type-check-program p))

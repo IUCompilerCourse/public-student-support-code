@@ -1,11 +1,11 @@
 #lang racket
 ;(require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Rwhile.rkt")
+(require "interp-Lwhile.rkt")
 (provide interp-Rcast interp-Rcast-class)
 
 (define interp-Rcast-class
-  (class interp-Rwhile-class
+  (class interp-Lwhile-class
     (super-new)
     (inherit apply-fun apply-inject apply-project)
 

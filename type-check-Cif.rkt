@@ -1,7 +1,7 @@
 #lang racket
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
-(require "type-check-Rif.rkt")
+(require "type-check-Lif.rkt")
 (provide type-check-Cif type-check-Cif-class type-check-Cif-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -12,8 +12,15 @@
     (super-new)
     (inherit check-type-equal?)
 
+    (define/override ((type-check-atm env) e)
+      (match e
+        [(Bool b) (values (Bool b) 'Boolean)]
+        [else
+         ((super type-check-atm env) e)]
+        ))
+    
     (define/override ((type-check-exp env) e)
-      (debug 'type-check-exp "Cvar ~a" e)
+      (debug 'type-check-exp "Cif ~a" e)
       (match e
         [(Bool b) (values (Bool b) 'Boolean)]
         [(Prim 'eq? (list e1 e2))
@@ -48,7 +55,7 @@
 
 (define type-check-Cif-class (type-check-Cif-mixin
                              (type-check-Cvar-mixin
-                              type-check-Rif-class)))
+                              type-check-Lif-class)))
 
 (define (type-check-Cif p)
   (send (new type-check-Cif-class) type-check-program p))

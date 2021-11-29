@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rif.rkt")
+(require "interp-Lif.rkt")
 (require "interp-Cvar.rkt")
 (provide interp-Cif interp-Cif-mixin)
 
@@ -42,7 +42,7 @@
     ))
 
 (define (interp-Cif p)
-  (define Cif-class (interp-Cif-mixin (interp-Cvar-mixin interp-Rif-class)))
+  (define Cif-class (interp-Cif-mixin (interp-Cvar-mixin interp-Lif-class)))
   (send (new Cif-class) interp-program p))
 
   

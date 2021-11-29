@@ -1,12 +1,12 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Rwhile-prime.rkt")
+(require "interp-Lwhile-prime.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Rwhile-proxy interp-Rwhile-proxy-class)
+(provide interp-Lwhile-proxy interp-Lwhile-proxy-class)
 
-(define interp-Rwhile-proxy-class
-  (class interp-Rwhile-prime-class
+(define interp-Lwhile-proxy-class
+  (class interp-Lwhile-prime-class
     (super-new)
     (inherit apply-fun initialize! interp-def interp-exp)
 
@@ -87,6 +87,6 @@
     
     ))
 
-(define (interp-Rwhile-proxy p)
-  (send (new interp-Rwhile-proxy-class) interp-program p))
+(define (interp-Lwhile-proxy p)
+  (send (new interp-Lwhile-proxy-class) interp-program p))
 

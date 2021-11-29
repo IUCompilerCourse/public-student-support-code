@@ -1,17 +1,17 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Rvar.rkt")
-(provide type-check-Rif type-check-Rif-class)
+(require "type-check-Lvar.rkt")
+(provide type-check-Lif type-check-Lif-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Booleans and Control Flow                                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rif
+;; type-check-Lif
 
-(define type-check-Rif-class
-  (class type-check-Rvar-class
+(define type-check-Lif-class
+  (class type-check-Lvar-class
     (super-new)
     (inherit check-type-equal?)
     
@@ -46,6 +46,6 @@
           [else ((super type-check-exp env) e)])))
     ))
 
-(define (type-check-Rif p)
-  (send (new type-check-Rif-class) type-check-program p))
+(define (type-check-Lif p)
+  (send (new type-check-Lif-class) type-check-program p))
 

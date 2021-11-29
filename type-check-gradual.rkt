@@ -1,17 +1,17 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Rwhile.rkt")
+(require "type-check-Lwhile.rkt")
 (require "type-check-Cwhile.rkt")
 
 (provide type-check-gradual type-check-gradual-class
-         type-check-Rwhile-proxy type-check-Rwhile-proxy-class
+         type-check-Lwhile-proxy type-check-Lwhile-proxy-class
          type-check-Cwhile-proxy type-check-Cwhile-proxy-class
          )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define type-check-gradual-class
-  (class type-check-Rwhile-class
+  (class type-check-Lwhile-class
     (super-new)
     (inherit operator-types type-predicates)
     
@@ -277,9 +277,9 @@
   (send (new type-check-gradual-class) type-check-program p))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rwhile-proxy
+;; type-check-Lwhile-proxy
 
-(define (type-check-Rwhile-proxy-mixin super-class)
+(define (type-check-Lwhile-proxy-mixin super-class)
   (class super-class
     (super-new)
     (inherit check-type-equal?)
@@ -357,17 +357,17 @@
     
     ))
 
-(define type-check-Rwhile-proxy-class
-  (type-check-Rwhile-proxy-mixin type-check-Rwhile-class))
+(define type-check-Lwhile-proxy-class
+  (type-check-Lwhile-proxy-mixin type-check-Lwhile-class))
   
-(define (type-check-Rwhile-proxy p)
-  (send (new type-check-Rwhile-proxy-class) type-check-program p))
+(define (type-check-Lwhile-proxy p)
+  (send (new type-check-Lwhile-proxy-class) type-check-program p))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Cwhile-proxy
 
 (define type-check-Cwhile-proxy-class
-  (type-check-Rwhile-proxy-mixin type-check-Cwhile-class))
+  (type-check-Lwhile-proxy-mixin type-check-Cwhile-class))
 
 (define (type-check-Cwhile-proxy p)
   (send (new type-check-Cwhile-proxy-class) type-check-program p))

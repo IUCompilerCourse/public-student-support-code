@@ -2,21 +2,21 @@
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
-(require "type-check-Rvec.rkt")
+(require "type-check-Lvec.rkt")
 (require "type-check-Cvec.rkt")
 (require "type-check-Cfun.rkt")
-(require "type-check-Rlambda.rkt")
-(provide type-check-Rany type-check-Rany-class)
+(require "type-check-Llambda.rkt")
+(provide type-check-Lany type-check-Lany-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Type Checker for the Any type and inject, project, etc.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rany
+;; type-check-Lany
 
-(define type-check-Rany-class
-  (class type-check-Rlambda-class
+(define type-check-Lany-class
+  (class type-check-Llambda-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -68,6 +68,7 @@
 
     (define/override (type-check-exp env)
       (lambda (e)
+        (debug 'type-check-exp "Lany" e)
         (define recur (type-check-exp env))
         (match e
           ;; Change If to use combine-types
@@ -131,6 +132,6 @@
 
     ))
 
-(define (type-check-Rany p)
-  (send (new type-check-Rany-class) type-check-program p))
+(define (type-check-Lany p)
+  (send (new type-check-Lany-class) type-check-program p))
 

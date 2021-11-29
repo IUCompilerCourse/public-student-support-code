@@ -1,15 +1,15 @@
 #lang racket
 (require "utilities.rkt")
-(provide type-check-Rvar type-check-Rvar-class)
+(provide type-check-Lvar type-check-Lvar-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Integers and Variables                                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rvar
+;; type-check-Lvar
 
-(define type-check-Rvar-class
+(define type-check-Lvar-class
   (class object%
     (super-new)
 
@@ -34,7 +34,7 @@
 
     (define/public (type-check-exp env)
       (lambda (e)
-        (debug 'type-check-exp "Rvar ~a" e)
+        (debug 'type-check-exp "Lvar ~a" e)
         (match e
           [(Var x)  (values (Var x) (dict-ref env x))]
           [(Int n)  (values (Int n) 'Integer)]
@@ -54,10 +54,10 @@
          (define-values (body^ Tb) ((type-check-exp '()) body))
          (check-type-equal? Tb 'Integer body)
          (Program info body^)]
-        [else (error 'type-check-Rvar "couldn't match ~a" e)]))
+        [else (error 'type-check-Lvar "couldn't match ~a" e)]))
     ))
 
-(define (type-check-Rvar p)
-  (send (new type-check-Rvar-class) type-check-program p))
+(define (type-check-Lvar p)
+  (send (new type-check-Lvar-class) type-check-program p))
 
 

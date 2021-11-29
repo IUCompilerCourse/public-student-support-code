@@ -3,23 +3,24 @@
 (require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
 (require "type-check-Cvec.rkt")
-(require "type-check-Rfun.rkt")
+(require "type-check-Lfun.rkt")
 (require "type-check-Cfun.rkt")
-(provide type-check-Rlambda type-check-Rlambda-class typed-vars)
+(provide type-check-Llambda type-check-Llambda-class typed-vars)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Lambda                                                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rlambda
+;; type-check-Llambda
 
 (define typed-vars (make-parameter #f))
 
-(define type-check-Rlambda-class
-  (class type-check-Rfun-class
+(define type-check-Llambda-class
+  (class type-check-Lfun-class
     (super-new)
     (inherit check-type-equal?)
+    (inherit-field max-parameters)
     
     ;; lenient type checking for '_
     (define/override (type-equal? t1 t2)
@@ -38,7 +39,7 @@
 
     (define/override (type-check-exp env)
       (lambda (e)
-        (debug 'type-check-exp "Rlambda" e)
+        (debug 'type-check-exp "Llambda" e)
         (define recur (type-check-exp env))
         (match e
           [(HasType (Var x) t)
@@ -72,6 +73,9 @@
            (let ([t (dict-ref env f)])
              (values (FunRefArity f n) t))]
           [(Lambda (and params `([,xs : ,Ts] ...)) rT body)
+           (unless (< (length xs) max-parameters)
+             (error 'type-check "lambda has too many parameters, max is ~a"
+                    max-parameters))
            (define-values (new-body bodyT) 
              ((type-check-exp (append (map cons xs Ts) env)) body))
            (define ty `(,@Ts -> ,rT))
@@ -82,5 +86,5 @@
 
     ))
 
-(define (type-check-Rlambda p)
-  (send (new type-check-Rlambda-class) type-check-program p))
+(define (type-check-Llambda p)
+  (send (new type-check-Llambda-class) type-check-program p))

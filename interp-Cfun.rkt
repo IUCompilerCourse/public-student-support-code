@@ -1,8 +1,9 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Rfun-prime.rkt")
+(require "interp-Lfun-prime.rkt")
 (require "interp-Cvar.rkt")
 (require "interp-Cif.rkt")
+(require "interp-Cwhile.rkt")
 (require "interp-Cvec.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
 (provide interp-Cfun interp-Cfun-mixin)
@@ -15,7 +16,12 @@
     (define/override (interp-stmt env)
       (lambda (s)
         (match s
-          [(Assign (Var x) e)
+          [(Call e es)
+           (define f-val ((interp-exp env) e))
+           (define arg-vals (map (interp-exp env) es))
+           (call-function f-val arg-vals s)
+           env]
+          #;[(Assign (Var x) e)
            (dict-set env x (box ((interp-exp env) e)))]
           [else ((super interp-stmt env) s)]
           )))
@@ -74,8 +80,10 @@
     ))
 
 (define (interp-Cfun p)
-  (define Cfun-class (interp-Cfun-mixin (interp-Cvec-mixin
-                                     (interp-Cif-mixin
-                                      (interp-Cvar-mixin
-                                       interp-Rfun-prime-class)))))
+  (define Cfun-class (interp-Cfun-mixin
+                      (interp-Cvec-mixin
+                       (interp-Cwhile-mixin
+                        (interp-Cif-mixin
+                         (interp-Cvar-mixin
+                          interp-Lfun-prime-class))))))
   (send (new Cfun-class) interp-program p))

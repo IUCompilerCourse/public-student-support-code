@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt" (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Rdyn interp-Rdyn-prog)
+(provide interp-Ldyn interp-Ldyn-prog)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -63,9 +63,9 @@
   (unless (eq? tag expected)
     (error 'trapped-error "expected ~a tag, not ~a\nin ~v" expected tag ast)))
 
-(define ((interp-Rdyn-exp env) ast)
-  (verbose 'interp-Rdyn "start" ast)
-  (define recur (interp-Rdyn-exp env))
+(define ((interp-Ldyn-exp env) ast)
+  (verbose 'interp-Ldyn "start" ast)
+  (define recur (interp-Ldyn-exp env))
   (define result
     (match ast
       [(Var x) (lookup x env)]
@@ -93,7 +93,7 @@
        (vector-set! (Tagged-value vec) (Tagged-value i) arg)
        (Tagged (void) 'Void)]
       [(Let x e body)
-       ((interp-Rdyn-exp (cons (cons x (recur e)) env)) body)]
+       ((interp-Ldyn-exp (cons (cons x (recur e)) env)) body)]
       [(Prim 'and (list e1 e2)) (recur (If e1 e2 (Bool #f)))]
       [(Prim 'or (list e1 e2))
        (define v1 (recur e1))
@@ -127,38 +127,38 @@
             (error 'trapped-error "number of arguments ~a != arity ~a\nin ~v"
                    (length args) (length xs) ast))
           (define new-env (append (map cons xs args) lam-env))
-          ((interp-Rdyn-exp new-env) body)]
-         [else (error "interp-Rdyn-exp, expected function, not" f-val)])]))
-  (verbose 'interp-Rdyn ast result)
+          ((interp-Ldyn-exp new-env) body)]
+         [else (error "interp-Ldyn-exp, expected function, not" f-val)])]))
+  (verbose 'interp-Ldyn ast result)
   result)
 
-(define (interp-Rdyn-def ast)
+(define (interp-Ldyn-def ast)
   (match ast
     [(Def f xs rt info body) (mcons f `(function ,xs ,body ()))]))
 
-;; This version is for source code in Rdyn.
-(define (interp-Rdyn ast)
+;; This version is for source code in Ldyn.
+(define (interp-Ldyn ast)
   (match ast
     [(ProgramDefsExp info ds body)
-     (define top-level (map (lambda (d) (interp-Rdyn-def d)) ds))
+     (define top-level (map (lambda (d) (interp-Ldyn-def d)) ds))
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
                       [`(function ,xs ,body ())
                        (Tagged `(function ,xs ,body ,top-level) 'Procedure)])))
-     (define result ((interp-Rdyn-exp top-level) body))
+     (define result ((interp-Ldyn-exp top-level) body))
      (check-tag result 'Integer ast)
      (Tagged-value result)]
-    [(Program info body) (interp-Rdyn (ProgramDefsExp info '() body))]))
+    [(Program info body) (interp-Ldyn (ProgramDefsExp info '() body))]))
 
 ;; This version is for after shrink.
-(define (interp-Rdyn-prog ast)
+(define (interp-Ldyn-prog ast)
   (match ast
     [(ProgramDefs info ds)
-     (define top-level (map (lambda (d) (interp-Rdyn-def d)) ds))
+     (define top-level (map (lambda (d) (interp-Ldyn-def d)) ds))
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
                       [`(function ,xs ,body ())
                        (Tagged `(function ,xs ,body ,top-level) 'Procedure)])))
-     (define result ((interp-Rdyn-exp top-level) (Apply (Var 'main) '())))
+     (define result ((interp-Ldyn-exp top-level) (Apply (Var 'main) '())))
      (check-tag result 'Integer ast)
      (Tagged-value result)]))

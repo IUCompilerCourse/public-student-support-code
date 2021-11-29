@@ -1,5 +1,5 @@
 #lang racket
-(require "utilities.rkt" "type-check-Rvar.rkt")
+(require "utilities.rkt" "type-check-Lvar.rkt")
 (provide type-check-Cvar type-check-Cvar-mixin)
 
 
@@ -60,10 +60,10 @@
                                 (cons x t)))
          (define new-info (dict-set info 'locals-types locals-types))
          (CProgram new-info blocks)]
-        [else (error 'type-check-program "expected a Cvar program, not ~a" p)]))
+        [else (error 'type-check-program "expected a C program, not ~a" p)]))
     ))
 
-(define type-check-Cvar-class (type-check-Cvar-mixin type-check-Rvar-class))
+(define type-check-Cvar-class (type-check-Cvar-mixin type-check-Lvar-class))
 
 (define (type-check-Cvar p)
   (send (new type-check-Cvar-class) type-check-program p))

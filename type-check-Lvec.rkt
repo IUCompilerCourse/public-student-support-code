@@ -1,18 +1,18 @@
 #lang racket
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
-(require "type-check-Rwhile.rkt")
-(provide type-check-Rvec type-check-Rvec-class)
+(require "type-check-Lwhile.rkt")
+(provide type-check-Lvec type-check-Lvec-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Tuples (aka Vectors)                                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Rvec
+;; type-check-Lvec
 
-(define type-check-Rvec-class
-  (class type-check-Rwhile-class
+(define type-check-Lvec-class
+  (class type-check-Lwhile-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -21,6 +21,8 @@
         (define recur (type-check-exp env))
         (match e
           [(Prim 'vector es)
+           (unless (<= (length es) 50)
+             (error 'type-check "vector too large ~a, max is 50" (length es)))
            (define-values (e* t*) (for/lists (e* t*) ([e es]) (recur e)))
            (define t `(Vector ,@t*))
            (values (HasType (Prim 'vector e*) t)  t)]
@@ -71,12 +73,12 @@
           )))
     ))
 
-(define (type-check-Rvec p)
-  (send (new type-check-Rvec-class) type-check-program p))
+(define (type-check-Lvec p)
+  (send (new type-check-Lvec-class) type-check-program p))
 
 #;(define (type-check-exp env)
-  (send (new type-check-Rvec-class) type-check-exp env))
+  (send (new type-check-Lvec-class) type-check-exp env))
 
 #;(define (type-equal? t1 t2)
-  (send (new type-check-Rvec-class) type-equal? t1 t2))
+  (send (new type-check-Lvec-class) type-equal? t1 t2))
 

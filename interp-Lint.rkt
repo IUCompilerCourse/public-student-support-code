@@ -1,10 +1,10 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-Rint interp-Rint-class)
+(provide interp-Lint interp-Lint-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Interpreter for Rint: integer arithmetic
+;; Interpreter for Lint: integer arithmetic
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
@@ -28,16 +28,16 @@
        (fx+ v1 v2)]
       ))
 
-(define (interp-Rint p)
+(define (interp-Lint p)
   (match p
     [(Program '() e) (interp-exp e)]
     ))
 
 
-;; This version of the interpreter for Rint is the base class
+;; This version of the interpreter for Lint is the base class
 ;; for interp-Rvar-class in interp-Rvar.rkt.
 
-(define interp-Rint-class
+(define interp-Lint-class
   (class object%
     (super-new)
     
