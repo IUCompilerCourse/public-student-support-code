@@ -9,6 +9,7 @@
 *.o
 *.s
 *.out
+*.out.dSYM
 *~
 
 # Compiled racket bytecode
