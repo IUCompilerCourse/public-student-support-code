@@ -16,7 +16,7 @@
 ;; 
 ;; The interpreters for the source languages (Lvar, Lif, ...)
 ;; and the C intermediate languages Cvar and Cif
-;; are in separate files, e.g., interp-Rvar.rkt.
+;; are in separate files, e.g., interp-Lvar.rkt.
 
 #;(define interp-R3-prime
   (lambda (p)

@@ -2,7 +2,7 @@
 (require racket/set racket/stream)
 (require racket/fixnum)
 (require "interp-Rint.rkt")
-(require "interp-Rvar.rkt")
+(require "interp-Lvar.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
@@ -95,9 +95,9 @@
 ;; Note that your compiler file (the file that defines the passes)
 ;; must be named "compiler.rkt"
 (define compiler-passes
-  `( ("uniquify" ,uniquify ,interp-Rvar)
+  `( ("uniquify" ,uniquify ,interp-Lvar)
      ;; Uncomment the following passes as you finish them.
-     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Rvar)
+     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Lvar)
      ;; ("explicate control" ,explicate-control ,interp-Cvar)
      ;; ("instruction selection" ,select-instructions ,interp-x86-0)
      ;; ("assign homes" ,assign-homes ,interp-x86-0)

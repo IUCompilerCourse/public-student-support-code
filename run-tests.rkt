@@ -2,7 +2,7 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Rvar.rkt")
+(require "interp-Lvar.rkt")
 (require "interp-Cvar.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
@@ -24,7 +24,7 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-(interp-tests "var" #f compiler-passes interp-Rvar "var_test" (tests-for "var"))
+(interp-tests "var" #f compiler-passes interp-Lvar "var_test" (tests-for "var"))
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.

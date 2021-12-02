@@ -35,7 +35,7 @@
 
 
 ;; This version of the interpreter for Lint is the base class
-;; for interp-Rvar-class in interp-Rvar.rkt.
+;; for interp-Lvar-class in interp-Lvar.rkt.
 
 (define interp-Lint-class
   (class object%
