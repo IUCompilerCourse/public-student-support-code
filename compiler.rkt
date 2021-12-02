@@ -1,13 +1,13 @@
 #lang racket
 (require racket/set racket/stream)
 (require racket/fixnum)
-(require "interp-Rint.rkt")
-(require "interp-Rvar.rkt")
+(require "interp-Lint.rkt")
+(require "interp-Lvar.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Rint examples
+;; Lint examples
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; The following compiler pass is just a silly one that doesn't change
@@ -20,7 +20,7 @@
     [(Prim '- (list e1)) (Prim '- (list (flip-exp e1)))]
     [(Prim '+ (list e1 e2)) (Prim '+ (list (flip-exp e2) (flip-exp e1)))]))
 
-(define (flip-Rint e)
+(define (flip-Lint e)
   (match e
     [(Program info e) (Program info (flip-exp e))]))
 
@@ -43,7 +43,7 @@
     [(Prim '- (list e1)) (pe-neg (pe-exp e1))]
     [(Prim '+ (list e1 e2)) (pe-add (pe-exp e1) (pe-exp e2))]))
 
-(define (pe-Rint p)
+(define (pe-Lint p)
   (match p
     [(Program info e) (Program info (pe-exp e))]))
 
@@ -95,9 +95,9 @@
 ;; Note that your compiler file (the file that defines the passes)
 ;; must be named "compiler.rkt"
 (define compiler-passes
-  `( ("uniquify" ,uniquify ,interp-Rvar)
+  `( ("uniquify" ,uniquify ,interp-Lvar)
      ;; Uncomment the following passes as you finish them.
-     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Rvar)
+     ;; ("remove complex opera*" ,remove-complex-opera* ,interp-Lvar)
      ;; ("explicate control" ,explicate-control ,interp-Cvar)
      ;; ("instruction selection" ,select-instructions ,interp-x86-0)
      ;; ("assign homes" ,assign-homes ,interp-x86-0)
