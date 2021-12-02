@@ -1389,19 +1389,6 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct IndirectJmp (target) #:transparent #:property prop:custom-print-quotable 'never
-  #:methods gen:custom-write
-  [(define (write-proc ast port mode)
-     (let ([recur (make-recur port mode)])
-       (match ast
-         [(IndirectJmp target)
-          (let-values ([(line col pos) (port-next-location port)])
-            (write-string "jmp" port)
-            (write-string " " port)
-            (write-string "*" port)
-            (recur target port)
-            (newline-and-indent port col))])))])
-
 (struct Jmp (target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
