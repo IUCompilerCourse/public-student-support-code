@@ -29,6 +29,7 @@
         [else (error 'type-check-exp "expected a C exp, not ~a" e)]))
     
     (define/public ((type-check-stmt env) s)
+      (debug 'type-check-stmt "Cvar ~a" s)
       (match s
         [(Assign (Var x) e)
          (define-values (e^ t) ((type-check-exp env) e))
@@ -38,6 +39,7 @@
         [else (error 'type-check-stmt "expected a Cvar stmt, not ~a" s)]))
 
     (define/public ((type-check-tail env block-env blocks) t)
+      (debug 'type-check-tail "Cvar ~a" t)
       (match t
         [(Return e)
          (define-values (e^ t) ((type-check-exp env) e))

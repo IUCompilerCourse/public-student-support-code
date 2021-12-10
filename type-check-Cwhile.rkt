@@ -32,14 +32,10 @@
         [(Var x) (set x)]
         [(Int n) (set)]
         [(Bool b) (set)]
-        [(FunRefArity f n) (set)]
         [(Let x e body)
 	 (set-union (recur e) (set-remove (recur body) x))]
         [(If cnd thn els)
          (set-union (recur cnd) (recur thn) (recur els))]
-	[(Lambda (list `[,xs : ,Ts] ...) rT body)
-         (define (rm x s) (set-remove s x))
-         (foldl rm (recur body) xs)]
 	[(Prim op es)
 	 (apply set-union (cons (set) (map recur es)))]
         [(WhileLoop cnd body)
@@ -47,11 +43,8 @@
         [(Begin es e)
          (apply set-union (cons (recur e) (map recur es)))]
         [(SetBang x rhs) (set-union (set x) (recur rhs))]
-        [(ValueOf e ty) (recur e)]
-        ;[(Exit) (set)]
         ;; C-level expressions
         [(Void) (set)]
-        [(AllocateClosure len ty arity) (set)]
 	[else (error 'free-vars-exp "unmatched ~a" e)]))
     
     (define type-changed #t)
@@ -94,7 +87,7 @@
     
     (define/override (type-check-stmt env)
       (lambda (s)
-        (verbose 'type-check-stmt s)
+        (debug 'type-check-stmt "Cwhile" s)
         (match s
           [(Assign (Var x) e)
            #:when (exp-ready? e env)
@@ -108,7 +101,7 @@
 
     (define/override (type-check-tail env block-env blocks)
       (lambda (t)
-        (verbose 'type-check-tail t)
+        (debug 'type-check-tail "Cwhile" t)
         (match t
           [(Return e)
            #:when (exp-ready? e env)
@@ -152,39 +145,6 @@
         (for ([tgt (adjacent-tail b)])
           (add-directed-edge! G src tgt)))
       G)
-
-    #;(define/override (type-check-def global-env)
-      (lambda (d)
-        (match d
-          [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info blocks)
-           (verbose "type-check-def" f)
-           (define env (make-hash (append (map cons xs ps) global-env)))
-           (define block-env (make-hash))
-           (set! type-changed #t)
-           (define (iterate)
-             (cond [type-changed
-                    (set! type-changed #f)
-                    (for ([(label tail) (in-dict blocks)])
-                      (define t ((type-check-tail env block-env blocks) tail))
-                      (update-type label t block-env)
-                      )
-                    (verbose "type-check-def" env block-env)
-                    (iterate)]
-                   [else (void)]))
-           (iterate)
-           (define start (symbol-append f 'start))
-           (unless (dict-has-key? block-env start)
-             (error 'type-check-def "failed to infer type for ~a" start))
-           (define t (dict-ref block-env start))
-           (unless (type-equal? t rt)
-             (error "mismatching return type" t rt))
-           (define locals-types
-             (for/list ([(x t) (in-dict env)]
-                        #:when (not (dict-has-key? global-env x)))
-               (cons x t)))
-           (define new-info (dict-set info 'locals-types locals-types))
-           (Def f p:t* rt new-info blocks)]
-          )))
 
     (define/public (type-check-blocks info blocks env start)
       (define block-env (make-hash))
