@@ -33,6 +33,7 @@
         ))
     
     (define/override ((type-check-tail env block-env blocks) t)
+      (debug 'type-check-tail "Cif" t)
       (match t
         [(Goto label)
          ;; Memoization because blocks is a DAG -Jeremy
@@ -54,8 +55,8 @@
     ))
 
 (define type-check-Cif-class (type-check-Cif-mixin
-                             (type-check-Cvar-mixin
-                              type-check-Lif-class)))
+                              (type-check-Cvar-mixin
+                               type-check-Lif-class)))
 
 (define (type-check-Cif p)
   (send (new type-check-Cif-class) type-check-program p))

@@ -37,6 +37,7 @@
           [else ((super type-check-exp env) e)])))
     
     (define/override ((type-check-tail env block-env G) t)
+      (debug 'type-check-tail "Cfun" t)
       (match t
         [(TailCall f arg*)
          #:when (and (exp-ready? f env)

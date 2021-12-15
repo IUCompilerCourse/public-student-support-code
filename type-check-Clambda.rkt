@@ -6,7 +6,7 @@
 (require "type-check-Cvec.rkt")
 (require "type-check-Cfun.rkt")
 (require "type-check-Llambda.rkt")
-(provide type-check-Clambda type-check-Clambda-class)
+(provide type-check-Clambda type-check-Clambda-class type-check-Clambda-mixin)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -17,9 +17,14 @@
     (super-new)
     (inherit type-equal? exp-ready?)
 
-    #;(define/override (free-vars-exp e)
+    (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
+        [(FunRefArity f n) (set)]
+	[(Lambda (list `[,xs : ,Ts] ...) rT body)
+         (define (rm x s) (set-remove s x))
+         (foldl rm (recur body) xs)]
+        [(AllocateClosure len ty arity) (set)]
         [else (super free-vars-exp e)]))
     
     (define/override (type-check-exp env)

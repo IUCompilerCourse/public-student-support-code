@@ -34,19 +34,19 @@
     (define/public (type-predicates)
       (set 'boolean? 'integer? 'vector? 'procedure? 'void?))
 
-    (define/public (combine-types t1 t2)
+    (define/public (join-types t1 t2)
       (match (list t1 t2)
         [(list '_ t2) t2]
         [(list t1 '_) t1]
         [(list `(Vector ,ts1 ...)
                `(Vector ,ts2 ...))
          `(Vector ,@(for/list ([t1 ts1] [t2 ts2])
-                      (combine-types t1 t2)))]
+                      (join-types t1 t2)))]
         [(list `(,ts1 ... -> ,rt1)
                `(,ts2 ... -> ,rt2))
          `(,@(for/list ([t1 ts1] [t2 ts2])
-               (combine-types t1 t2))
-           -> ,(combine-types rt1 rt2))]
+               (join-types t1 t2))
+           -> ,(join-types rt1 rt2))]
         [else
          t1]))
 
@@ -71,14 +71,14 @@
         (debug 'type-check-exp "Lany" e)
         (define recur (type-check-exp env))
         (match e
-          ;; Change If to use combine-types
+          ;; Change If to use join-types
           [(If cnd thn els)
            (define-values (cnd^ Tc) (recur cnd))
            (define-values (thn^ Tt) (recur thn))
            (define-values (els^ Te) (recur els))
            (check-type-equal? Tc 'Boolean cnd)
            (check-type-equal? Tt Te e)
-           (values (If cnd^ thn^ els^) (combine-types Tt Te))]
+           (values (If cnd^ thn^ els^) (join-types Tt Te))]
           [(Prim 'any-vector-length (list e1))
            (define-values (e1^ t1) (recur e1))
            (check-type-equal? t1 'Any e)
