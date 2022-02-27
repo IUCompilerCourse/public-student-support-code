@@ -15,6 +15,7 @@
 ;; flips the arguments of +. -Jeremy
 (define (flip-exp e)
   (match e
+    [(Int n) e]
     [(Var x) e]
     [(Prim 'read '()) (Prim 'read '())]
     [(Prim '- (list e1)) (Prim '- (list (flip-exp e1)))]
