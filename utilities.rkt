@@ -2244,6 +2244,14 @@ Changelog:
        (close-output-port out)
        result)]))
 
+(define (get-arch)
+     (match (system-type 'arch)
+      [ 'aarch64 
+        (match (system-type 'os)
+        [ 'macosx "arch -x86_64 "]
+        [ else "" ])]
+      [ else "" ]))
+
 (define (compiler-tests-suite name typechecker passes test-family test-nums)
   (let ([compiler (compile-file typechecker passes)])
     (make-test-suite
@@ -2258,7 +2266,7 @@ Changelog:
               (test-case "typecheck" (check-false typechecks "Expected expression to fail typechecking"))
 	      (if (not typechecks) (fail "Expected expression to typecheck")
 		  (test-case "code generation"
-			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o ./tests/~a.s -o ./tests/~a.out" test-name test-name))])
+			     (let ([gcc-output (system (format (string-append (get-arch) "gcc -g -std=c99 runtime.o ./tests/~a.s -o ./tests/~a.out") test-name test-name))])
 			       (if (not gcc-output) (fail "Failed during assembly")
 				   (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
 						    (format " < ./tests/~a.in" test-name)
