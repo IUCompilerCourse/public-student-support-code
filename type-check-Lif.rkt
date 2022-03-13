@@ -16,8 +16,7 @@
     (inherit check-type-equal?)
     
     (define/override (operator-types)
-      (append '((- . ((Integer Integer) . Integer))
-                (and . ((Boolean Boolean) . Boolean))
+      (append '((and . ((Boolean Boolean) . Boolean))
                 (or . ((Boolean Boolean) . Boolean))
                 (< . ((Integer Integer) . Boolean))
                 (<= . ((Integer Integer) . Boolean))

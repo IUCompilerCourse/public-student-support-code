@@ -60,6 +60,7 @@
          (for/and ([t ts]) (eq? t 'Any))]
         [`(Vector ,ts ...)
          (for/and ([t ts]) (eq? t 'Any))]
+        ['(Vectorof Any) #t]
         [`(,ts ... -> ,rt)
          (and (eq? rt 'Any) (for/and ([t ts]) (eq? t 'Any)))]
         [else
@@ -83,6 +84,10 @@
            (define-values (e1^ t1) (recur e1))
            (check-type-equal? t1 'Any e)
            (values (Prim 'any-vector-length (list e1^)) 'Integer)]
+          [(Prim 'any-vectorof-length (list e1))
+           (define-values (e1^ t1) (recur e1))
+           (check-type-equal? t1 'Any e)
+           (values (Prim 'any-vectorof-length (list e1^)) 'Integer)]
           [(Prim 'any-vector-ref (list e1 e2))
            (define-values (e1^ t1) (recur e1))
            (define-values (e2^ t2) (recur e2))

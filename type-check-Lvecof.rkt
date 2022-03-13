@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Lwhile.rkt")
+(require "type-check-Lvec.rkt")
 (provide type-check-Lvecof type-check-Lvecof-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11,15 +11,10 @@
 ;; type-check-Lvecof
 
 (define type-check-Lvecof-class
-  (class type-check-Lwhile-class
+  (class type-check-Lvec-class
     (super-new)
     (inherit check-type-equal?)
 
-    (define/override (flat-ty? ty)
-      (match ty
-        ['(Vectorof Any) #t]
-        [else (super flat-ty? ty)]))
-    
     (define/override (operator-types)
       (append '((* . ((Integer Integer) . Integer)))
               (super operator-types)))
@@ -61,11 +56,6 @@
               (values (Prim 'vectorof-length (list e1^))  'Integer)]
              [else ((super type-check-exp env) e)])]
 
-          [(Prim 'any-vectorof-length (list e1))
-           (define-values (e1^ t1) (recur e1))
-           (check-type-equal? t1 'Any e)
-           (values (Prim 'any-vectorof-length (list e1^)) 'Integer)]
-          
           [(AllocateHom e1 t)
            (define-values (e1^ t1) (recur e1))
            (check-type-equal? t1 'Integer e)

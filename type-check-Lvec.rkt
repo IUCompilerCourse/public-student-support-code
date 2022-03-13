@@ -16,6 +16,14 @@
     (super-new)
     (inherit check-type-equal?)
 
+    (define/override (type-equal? t1 t2)
+      (debug 'type-equal? "lenient" t1 t2)
+      (match* (t1 t2)
+        [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
+         (for/and ([t1 ts1] [t2 ts2])
+           (type-equal? t1 t2))]
+        [(other wise) (super type-equal? t1 t2)]))
+    
     (define/override (type-check-exp env)
       (lambda (e)
         (define recur (type-check-exp env))
