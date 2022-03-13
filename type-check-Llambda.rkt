@@ -22,21 +22,6 @@
     (inherit check-type-equal?)
     (inherit-field max-parameters)
     
-    ;; lenient type checking for '_
-    (define/override (type-equal? t1 t2)
-      (debug 'type-equal? "lenient" t1 t2)
-      (match* (t1 t2)
-        [('_ t2) #t]
-        [(t1 '_) #t]
-        [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
-         (for/and ([t1 ts1] [t2 ts2])
-           (type-equal? t1 t2))]
-        [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
-         (and (for/and ([t1 ts1] [t2 ts2])
-                (type-equal? t1 t2))
-              (type-equal? rt1 rt2))]
-        [(other wise) (equal? t1 t2)]))
-
     (define/override (type-check-exp env)
       (lambda (e)
         (debug 'type-check-exp "Llambda" e)
@@ -69,9 +54,9 @@
            ((type-check-exp env) (Closure arity es))]
           [(AllocateClosure size t arity)
            (values (AllocateClosure size t arity) t)]
-          [(FunRefArity f n)
+          [(FunRef f n)
            (let ([t (dict-ref env f)])
-             (values (FunRefArity f n) t))]
+             (values (FunRef f n) t))]
           [(Lambda (and params `([,xs : ,Ts] ...)) rT body)
            (unless (< (length xs) max-parameters)
              (error 'type-check "lambda has too many parameters, max is ~a"

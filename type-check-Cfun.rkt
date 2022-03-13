@@ -13,13 +13,21 @@
 (define (type-check-Cfun-mixin super-class)
   (class super-class
     (super-new)
-    (inherit type-equal? type-check-apply type-check-blocks fun-def-type
+    (inherit type-check-apply type-check-blocks fun-def-type
              exp-ready?)
+    
+    (define/override (type-equal? t1 t2)
+      (match* (t1 t2)
+        [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
+         (and (for/and ([t1 ts1] [t2 ts2])
+                (type-equal? t1 t2))
+              (type-equal? rt1 rt2))]
+        [(other wise) (super type-equal? t1 t2)]))
 
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
-        [(FunRef f) (set)]
+        [(FunRef f n) (set)]
 	[(Apply e es)
 	 (apply set-union (cons (recur e) (map recur es)))]
         [(Call f arg*) (apply set-union (cons (recur f) (map recur arg*)))]
@@ -30,7 +38,7 @@
         (debug 'type-check-exp "Cfun" e)
         (define recur (type-check-exp env))
         (match e
-          [(FunRef f) (values (FunRef f) (dict-ref env f))]
+          [(FunRef f n) (values (FunRef f n) (dict-ref env f))]
           [(Call e es)
            (define-values (e^ es^ rt) (type-check-apply env e es))
            (values (Call e^ es^) rt)]

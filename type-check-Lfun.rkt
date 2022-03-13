@@ -1,6 +1,6 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Lvec.rkt")
+(require "type-check-Lvecof.rkt")
 (provide type-check-Lfun type-check-Lfun-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13,11 +13,23 @@
 ;; TODO: Don't allow eq? on function types. -Jeremy
 
 (define type-check-Lfun-class
-  (class type-check-Lvec-class
+  (class type-check-Lvecof-class
     (super-new)
     (inherit check-type-equal?)
 
     (field [max-parameters 32])
+
+    ;; Need lenient checking for closure conversion.
+    ;; Putting it here instead of in lambda because the C-level type
+    ;; checkers also need it and inherit from this type checker.
+
+    (define/override (type-equal? t1 t2)
+      (match* (t1 t2)
+        [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
+         (and (for/and ([t1 ts1] [t2 ts2])
+                (type-equal? t1 t2))
+              (type-equal? rt1 rt2))]
+        [(other wise) (super type-equal? t1 t2)]))
     
     (define/public (type-check-apply env e es)
       (define-values (e^ ty) ((type-check-exp env) e))
@@ -33,8 +45,8 @@
     (define/override (type-check-exp env)
       (lambda (e)
         (match e
-          [(FunRef f)
-           (values (FunRef f)  (dict-ref env f))]
+          [(FunRef f n)
+           (values (FunRef f n)  (dict-ref env f))]
           [(Apply e es)
            (define-values (e^ es^ rt) (type-check-apply env e es))
            (values (Apply e^ es^) rt)]

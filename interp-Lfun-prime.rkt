@@ -13,9 +13,7 @@
     (define/override ((interp-exp env) e)
       (verbose "Lfun'/interp-exp" e)
       (match e
-        [(FunRef f)
-         (unbox (lookup f env))]
-        [(FunRefArity f n)
+        [(FunRef f n)
          (unbox (lookup f env))]
         [else ((super interp-exp env) e)]
         ))

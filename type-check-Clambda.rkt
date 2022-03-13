@@ -20,7 +20,7 @@
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
-        [(FunRefArity f n) (set)]
+        [(FunRef f n) (set)]
 	[(Lambda (list `[,xs : ,Ts] ...) rT body)
          (define (rm x s) (set-remove s x))
          (foldl rm (recur body) xs)]

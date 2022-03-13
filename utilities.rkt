@@ -94,8 +94,7 @@ Changelog:
          (contract-out [struct Def ((name symbol?) (param* param-list?) (rty type?) (info any?)
                                                    (body any?))])
          (contract-out [struct Lambda ((param* param-list?) (rty type?) (body exp?))])
-         (contract-out [struct FunRef ((name symbol?))])
-         (contract-out [struct FunRefArity ((name symbol?) (arity fixnum?))])
+         (contract-out [struct FunRef ((name symbol?) (arity fixnum?))])
          (struct-out Inject)
          (struct-out Project)
          (struct-out ValueOf)
@@ -939,38 +938,19 @@ Changelog:
             (csp ast port mode)]
            ))))])
 
-(struct FunRef (name) #:transparent #:property prop:custom-print-quotable 'never
+(struct FunRef (name arity) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
      (let ([csp (make-constructor-style-printer
-             (lambda (obj) 'FunRef)
-             (lambda (obj) (list (FunRef-name obj))))])
+                 (lambda (obj) 'FunRef)
+                 (lambda (obj) (list (FunRef-name obj)
+                                     (FunRef-arity obj))))])
        (lambda (ast port mode)
      (cond [(eq? (AST-output-syntax) 'concrete-syntax)
               (let ([recur (make-recur port mode)])
                 (match ast
-                  [(FunRef f)
-                   (write-string "(fun-ref " port)
-                   (write-string (symbol->string f) port)
-                   (write-string ")" port)
-                   ]))]
-           [(eq? (AST-output-syntax) 'abstract-syntax)
-            (csp ast port mode)]
-           ))))])
-           
-(struct FunRefArity (name arity) #:transparent #:property prop:custom-print-quotable 'never
-  #:methods gen:custom-write
-  [(define write-proc
-     (let ([csp (make-constructor-style-printer
-                 (lambda (obj) 'FunRefArity)
-                 (lambda (obj) (list (FunRefArity-name obj)
-                                     (FunRefArity-arity obj))))])
-       (lambda (ast port mode)
-     (cond [(eq? (AST-output-syntax) 'concrete-syntax)
-              (let ([recur (make-recur port mode)])
-                (match ast
-                  [(FunRefArity f n)
-                   (write-string "(fun-ref-arity" port)
+                  [(FunRef f n)
+                   (write-string "(fun-ref" port)
                    (write-string " " port)
                    (write-string (symbol->string f) port)
                    (write-string " " port)
@@ -1532,8 +1512,7 @@ Changelog:
     [(HasType e t) #t]
     [(Cast e src tgt) #t]
     [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
-    [(FunRef f) #t]
-    [(FunRefArity f n) #t]
+    [(FunRef f n) #t]
     [(Call f e*) #t]
     [(Inject e t) #t]
     [(Project e t) #t]
@@ -1625,7 +1604,7 @@ Changelog:
     [(ByteReg r) #t]
     [(? symbol?) #t] ;; for condition code in set instruction
     [(Global name) #t]
-    [(FunRef f) #t]
+    [(FunRef f n) #t]
     [else #f]))
 
 (define (arg-list? es)
@@ -1748,8 +1727,8 @@ Changelog:
         [(Imm n) (format "$~a" n)]
         [(Reg r) (format "%~a" r)]
         [(ByteReg r) (format "%~a" r)]
+        #;[(FunRef label n) (format "~a(%rip)" (label-name label))]
         [(Global label) (format "~a(%rip)" (label-name label))]
-        [(FunRef fun) (format "~a(%rip)" (label-name fun))]
         ))
     
     (define/public (print-x86-instr e)
@@ -1792,7 +1771,7 @@ Changelog:
                   (format "\t.globl ~a\n" (label-name 'main))
                   "")
               (string-append
-               "\t.align 16\n"
+               "\t.align 8\n"
                (format "~a:\n" (label-name label))
                (print-x86-block block)
                "\n"))))

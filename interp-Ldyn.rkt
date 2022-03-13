@@ -69,10 +69,7 @@
   (define result
     (match ast
       [(Var x) (lookup x env)]
-      [(FunRef f) (lookup f env)]
-      ;; The following deals with the detail of our translation.
-      ;; It keeps the arity of functions in the funref.
-      [(FunRefArity f n) (lookup f env)]
+      [(FunRef f n) (lookup f env)]
       [(Int n) (Tagged n 'Integer)]
       [(Bool b) (Tagged b 'Boolean)]
       [(Lambda xs rt body)
