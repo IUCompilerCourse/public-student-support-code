@@ -108,7 +108,6 @@ Changelog:
 
          
          #;(struct-out TagOf)
-         (struct-out Exit)
          (struct-out Closure)
          (struct-out AssignedFree)
            
@@ -121,7 +120,7 @@ Changelog:
          (struct-out CollectionNeeded?)
          (struct-out GlobalValue)
          (struct-out Allocate)
-         (struct-out AllocateHom)
+         (struct-out AllocateArray)
          (struct-out AllocateClosure)
          (struct-out AllocateProxy)
          (contract-out [struct Call ((fun atm?) (arg* atm-list?))])
@@ -145,6 +144,10 @@ Changelog:
          (contract-out [struct ByteReg ((name symbol?))])
          
          (struct-out Tagged)
+         (struct-out Function)
+         (struct-out CFunction)
+         (struct-out X86Function)
+         
          )
 
 ;; debug state is a nonnegative integer.
@@ -911,8 +914,6 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
-(struct Exit () #:transparent #:property prop:custom-print-quotable 'never)
-
 (struct AssignedFree (var)
   #:transparent #:property prop:custom-print-quotable 'never)
 
@@ -1128,13 +1129,13 @@ Changelog:
           )
         ]))])
 
-(struct AllocateHom (amount type) #:transparent #:property prop:custom-print-quotable 'never
+(struct AllocateArray (amount type) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc ast port mode)
      (match ast
-       [(AllocateHom amount type)
+       [(AllocateArray amount type)
         (let-values ([(line col pos) (port-next-location port)])
-          (write-string "(allocate-hom " port)
+          (write-string "(allocate-array " port)
           (write amount port)
           (write-string " " port)
           (write-type type port)
@@ -1461,6 +1462,12 @@ Changelog:
 
 (struct Tagged (value tag) #:transparent)
 
+(struct Function (params body env) #:transparent)
+
+(struct CFunction (params info blocks env) #:transparent)
+
+(struct X86Function (info blocks env) #:transparent)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; predicates for contracts on structs
 
@@ -1505,7 +1512,7 @@ Changelog:
     [(Apply e es) #t]
     [(GlobalValue n) #t]
     [(Allocate n t) #t]
-    [(AllocateHom n t) #t]
+    [(AllocateArray n t) #t]
     [(AllocateProxy t) #t]
     [(AllocateClosure n t a) #t]
     [(If cnd thn els) #t]
@@ -1517,7 +1524,6 @@ Changelog:
     [(Inject e t) #t]
     [(Project e t) #t]
     [(ValueOf e t) #t]
-    [(Exit) #t]
     [(Closure arity fvs) #t]
     [(WhileLoop cnd body) #t]
     [(SetBang x rhs) #t]
@@ -1569,9 +1575,11 @@ Changelog:
     [(Assign x e) #t]
     [(Collect n) #t]
     [(Prim 'vector-set! es) #t]
-    [(Prim 'any-vector-set! es) #t]
     [(Prim 'vectorof-set! es) #t]
+    [(Prim 'any-vector-set! es) #t]
+    [(Prim 'any-vectorof-set! es) #t]
     [(Prim 'read '()) #t]
+    [(Prim 'exit '()) #t]
     [(Call f arg) #t]
     [else #f]))
 
@@ -1582,7 +1590,7 @@ Changelog:
     [(Goto l) #t]
     [(IfStmt cnd els thn) #t]
     [(TailCall f arg*) #t]
-    [(Exit) #t]
+    [(Prim 'exit '()) #t]
     [else #f]))
 
 (define (goto? s)
@@ -1640,6 +1648,7 @@ Changelog:
          procedure-arity
          boolean? integer? vector? procedure? void?
          any-vector-ref any-vector-set! any-vector-length
+         any-vectorof-ref any-vectorof-set! any-vectorof-length
          make-vector))
 
 (define (parse-exp e)
@@ -2006,10 +2015,12 @@ Changelog:
                                             (lambda () (checker (thunk (initial-interp tsexp)))))
                                           (checker (thunk (initial-interp tsexp))))]
                                      [else 
-                                      (if (file-exists? result-file-name)
-                                          (call-with-input-file result-file-name
-                                            (lambda (f) (string->number (read-line f))))
-                                          42)])])
+                                      (cond [(file-exists? result-file-name)
+                                             (call-with-input-file result-file-name
+                                               (lambda (f) (string->number (read-line f))))]
+                                            [error-expected 'expected-error]
+                                            [else 
+                                             42])])])
         (let loop ([passes passes]
                    [p tsexp]
                    [tests '()])
@@ -2352,7 +2363,7 @@ Changelog:
         (set! arg-registers (vector 'rdi 'rsi))
         (set! registers-for-alloc (vector  'rsi 'rdi 'rbx))
         ; for the example in the register allocation chapter 
-        ;(set! registers-for-alloc (vector  'rcx))
+        ;(set! registers-for-alloc (vector 'rcx 'rbx))
         )
       (begin
         ;; The following ordering is specified in the x86-64 conventions.
@@ -2387,18 +2398,6 @@ Changelog:
 
 ;; The positive numbers here correspond to indices in the general-registers
 ;; and registers-for-alloc.
-;; TODO: reorder to put caller-saved registers first, as in below. -Jeremy
-#;(define reg-colors
-  '((rax . -1) (r11 . -2) (r15 . -3) (rbp . -4) (__flag . -5)
-    (rcx . 0) (rdx . 1) (rsi . 2) (rdi . 3) (r8 . 4) (r9 . 5) (r10 . 6)
-    (rbx . 7) (r12 . 8) (r13 . 9) (r14 . 10)
-    ))
-#;(define reg-colors
-  '((rax . -1) (r11 . -2) (r15 . -3) (rbp . -4) (__flag . -5)
-    (rbx . 0) (rcx . 1) (rdx . 2) (rsi . 3) (rdi . 4)
-    (r8 . 5) (r9 . 6) (r10 . 7) (r12 . 8) (r13 . 9)
-    (r14 . 10)))
-
 ;; The following needs to be a function so that it doesn't execute
 ;; before the parameter use-minimal-set-of-registers!  gets set by ad
 ;; command line flag! -Jeremy
