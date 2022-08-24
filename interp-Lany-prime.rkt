@@ -1,5 +1,6 @@
 #lang racket
 (require "interp-Lvec-prime.rkt")
+(require "interp-Lvecof-prime.rkt")
 (require "interp-Lfun-prime.rkt")
 (require "interp-Llambda-prime.rkt")
 (require "interp-Lany.rkt")
@@ -29,7 +30,6 @@
          (match (recur e)
            [(Tagged v^ tg)  v^]
            [v (error 'interp-op "expected tagged value, not ~a" v)])]
-        [(Exit) (error 'interp-exp "exiting")]
         [else ((super interp-exp env) e)]))
   ))
 
@@ -37,7 +37,9 @@
   (interp-Lany-prime-mixin
    (interp-Llambda-prime-mixin
     (interp-Lfun-prime-mixin
-     (interp-Lvec-prime-mixin interp-Lany-class)))))
+     (interp-Lvecof-prime-mixin
+      (interp-Lvec-prime-mixin
+       interp-Lany-class))))))
     
 (define (interp-Lany-prime p)
   (send (new interp-Lany-prime-class) interp-program p))

@@ -23,7 +23,7 @@
         [(Var x) (unbox (dict-ref env x))]
         [(GetBang x) (unbox (dict-ref env x))]
         [(SetBang x rhs)
-         (set-box! (lookup x env) (recur rhs))]
+         (set-box! (dict-ref env x) (recur rhs))]
         [(WhileLoop cnd body)
          (define (loop)
            (cond [(recur cnd)  (recur body) (loop)]

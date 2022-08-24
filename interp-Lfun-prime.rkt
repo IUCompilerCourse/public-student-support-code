@@ -1,4 +1,5 @@
 #lang racket
+(require "interp-Lvecof-prime.rkt")
 (require "interp-Lvec-prime.rkt")
 (require "interp-Lfun.rkt")
 (require "utilities.rkt")
@@ -27,14 +28,17 @@
          (define top-level (for/list ([d ds]) (interp-def d)))
          (for ([f (in-dict-values top-level)])
            (set-box! f (match (unbox f)
-                         [`(function ,xs ,body ())
-                          `(function ,xs ,body ,top-level)])))
+                         [(Function xs body '())
+                          (Function xs body top-level)])))
          ((interp-exp top-level) (Apply (Var 'main) '()))]))
         
     ))
 
-(define interp-Lfun-prime-class (interp-Lfun-prime-mixin
-                               (interp-Lvec-prime-mixin interp-Lfun-class)))
+(define interp-Lfun-prime-class
+  (interp-Lfun-prime-mixin
+   (interp-Lvecof-prime-mixin
+    (interp-Lvec-prime-mixin
+     interp-Lfun-class))))
     
 (define (interp-Lfun-prime p)
   (send (new interp-Lfun-prime-class) interp-program p))

@@ -31,7 +31,13 @@
         ['any-vector-set! (lambda (v i a)
                             (match v [(Tagged v^ tg) (vector-set! v^ i a)]))]
         ['any-vector-length (lambda (v)
-                            (match v [(Tagged v^ tg) (vector-length v^)]))]
+                              (match v [(Tagged v^ tg) (vector-length v^)]))]
+        ['any-vectorof-ref (lambda (v i)
+                             (match v [(Tagged v^ tg) (vector-ref v^ i)]))]
+        ['any-vectorof-set! (lambda (v i a)
+                              (match v [(Tagged v^ tg) (vector-set! v^ i a)]))]
+        ['any-vectorof-length (lambda (v)
+                              (match v [(Tagged v^ tg) (vector-length v^)]))]
         [else (super interp-op op)]))
 
     (define/public (apply-inject v tg) (Tagged v tg))
@@ -51,7 +57,7 @@
                               l1 (length ts))])]
               [`(,ts ... -> ,rt)
                (match v1
-                 [`(function ,xs ,body ,env)
+                 [(Function xs body env)
                   (cond [(eq? (length xs) (length ts)) v1]
                         [else
                          (error 'apply-project "arity mismatch ~a != ~a"

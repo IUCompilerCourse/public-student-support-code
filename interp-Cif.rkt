@@ -20,18 +20,19 @@
     (define/override (interp-tail env blocks)
       (lambda (t)
         (match t
+          ;; Cvar cases, repeated logic but with blocks added
           [(Return e)
            ((interp-exp env) e)]
+          [(Seq s t2)
+           (define new-env ((interp-stmt env) s))
+           ((interp-tail new-env blocks) t2)]
+          ;; Cif cases
           [(Goto l)
            ((interp-tail env blocks) (dict-ref blocks l))]
           [(IfStmt (Prim op arg*) (Goto thn-label) (Goto els-label))
            (if ((interp-exp env) (Prim op arg*))
                ((interp-tail env blocks) (dict-ref blocks thn-label))
                ((interp-tail env blocks) (dict-ref blocks els-label)))]
-          [(Seq s t2)
-           (define new-env ((interp-stmt env) s))
-           ((interp-tail new-env blocks) t2)]
-          [else ((super interp-tail env blocks) t)]
           )))
     
     (define/override (interp-program p)

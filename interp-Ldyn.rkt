@@ -30,7 +30,7 @@
     ['void? void?]
     ['vector? vector?]
     ['vector-length vector-length]
-    ['procedure? (match-lambda [`(functions ,xs ,body ,env) #t]
+    ['procedure? (match-lambda [(Function xs body env) #t]
                                [else #f])]
     [else (error 'interp-op "unknown operator ~a" op)]))
 
@@ -73,7 +73,7 @@
       [(Int n) (Tagged n 'Integer)]
       [(Bool b) (Tagged b 'Boolean)]
       [(Lambda xs rt body)
-       (Tagged `(function ,xs ,body ,env) 'Procedure)]
+       (Tagged (Function xs body env) 'Procedure)]
       [(Prim 'vector es)
        (Tagged (apply vector (for/list ([e es]) (recur e))) 'Vector)]
       [(Prim 'vector-ref (list e1 e2))
@@ -119,7 +119,7 @@
        (check-tag new-f 'Procedure ast)
        (define f-val (Tagged-value new-f))
        (match f-val 
-         [`(function ,xs ,body ,lam-env)
+         [(Function xs body lam-env)
           (unless (eq? (length xs) (length args))
             (error 'trapped-error "number of arguments ~a != arity ~a\nin ~v"
                    (length args) (length xs) ast))
@@ -131,7 +131,7 @@
 
 (define (interp-Ldyn-def ast)
   (match ast
-    [(Def f xs rt info body) (mcons f `(function ,xs ,body ()))]))
+    [(Def f xs rt info body) (mcons f (Function xs body '()))]))
 
 ;; This version is for source code in Ldyn.
 (define (interp-Ldyn ast)
@@ -140,8 +140,8 @@
      (define top-level (map (lambda (d) (interp-Ldyn-def d)) ds))
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
-                      [`(function ,xs ,body ())
-                       (Tagged `(function ,xs ,body ,top-level) 'Procedure)])))
+                      [(Function xs body '())
+                       (Tagged (Function xs body top-level) 'Procedure)])))
      (define result ((interp-Ldyn-exp top-level) body))
      (check-tag result 'Integer ast)
      (Tagged-value result)]
@@ -154,8 +154,8 @@
      (define top-level (map (lambda (d) (interp-Ldyn-def d)) ds))
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
-                      [`(function ,xs ,body ())
-                       (Tagged `(function ,xs ,body ,top-level) 'Procedure)])))
+                      [(Function xs body '())
+                       (Tagged (Function xs body top-level) 'Procedure)])))
      (define result ((interp-Ldyn-exp top-level) (Apply (Var 'main) '())))
      (check-tag result 'Integer ast)
      (Tagged-value result)]))

@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lvec.rkt")
+(require "interp-Lvecof.rkt")
 (provide interp-Lfun interp-Lfun-class)
 
 ;; Note to maintainers of this code:
@@ -9,12 +9,12 @@
 ;;   kept in sync with this code.
 
 (define interp-Lfun-class
-  (class interp-Lvec-class
+  (class interp-Lvecof-class
     (super-new)
 
     (define/public (apply-fun fun-val arg-vals e)
       (match fun-val
-        [`(function ,xs ,body ,fun-env)
+        [(Function xs body fun-env)
          (define params-args (for/list ([x xs] [arg arg-vals])
                                (cons x (box arg))))
          (define new-env (append params-args fun-env))
@@ -26,10 +26,6 @@
       (define recur (interp-exp env))
       (verbose "Lfun/interp-exp" e)
       (match e
-        [(Var x) (unbox (dict-ref env x))]
-        [(Let x e body)
-         (define new-env (dict-set env x (box (recur e))))
-         ((interp-exp new-env) body)]
         [(Apply fun args)
          (define fun-val (recur fun))
          (define arg-vals (for/list ([e args]) (recur e)))
@@ -39,7 +35,7 @@
     (define/public (interp-def d)
       (match d
         [(Def f (list `[,xs : ,ps] ...) rt _ body)
-         (cons f (box `(function ,xs ,body ())))]
+         (cons f (box (Function xs body '())))]
         ))
 
     (define/override (interp-program p)
@@ -49,8 +45,8 @@
          (let ([top-level (for/list ([d ds]) (interp-def d))])
            (for/list ([f (in-dict-values top-level)])
              (set-box! f (match (unbox f)
-                           [`(function ,xs ,body ())
-                            `(function ,xs ,body ,top-level)])))
+                           [(Function xs body '())
+                            (Function xs body top-level)])))
            ((interp-exp top-level) body))]
         
         ;; For after the shrink pass.
@@ -58,8 +54,8 @@
          (define top-level (for/list ([d ds]) (interp-def d)))
          (for ([f (in-dict-values top-level)])
            (set-box! f (match (unbox f)
-                         [`(function ,xs ,body ())
-                          `(function ,xs ,body ,top-level)])))
+                         [(Function xs body '())
+                          (Function xs body top-level)])))
          ;; call the main function
          ((interp-exp top-level) (Apply (Var 'main) '()))]
         ))

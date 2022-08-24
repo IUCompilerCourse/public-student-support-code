@@ -1,11 +1,11 @@
 #lang racket
 ;(require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lwhile.rkt")
-(provide interp-Rcast interp-Rcast-class)
+(require "interp-Lany.rkt")
+(provide interp-Lcast interp-Lcast-class)
 
-(define interp-Rcast-class
-  (class interp-Lwhile-class
+(define interp-Lcast-class
+  (class interp-Lany-class
     (super-new)
     (inherit apply-fun apply-inject apply-project)
 
@@ -32,7 +32,7 @@
         [else (vector-length vec)]))
 
     (define/override (interp-op op)
-      (verbose "Rcast/interp-op" op)
+      (verbose "Lcast/interp-op" op)
       (match op
         ['vector-length guarded-vector-length]
         ['vector-ref guarded-vector-ref]
@@ -77,35 +77,36 @@
         [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
          (define x (gensym 'x))
          (define cast-reads (for/list ([t1 ts1] [t2 ts2])
-                              `(function (,x) ,(Cast (Var x) t1 t2) ())))
+                              (Function (list x) (Cast (Var x) t1 t2) '())))
          (define cast-writes
            (for/list ([t1 ts1] [t2 ts2])
-             `(function (,x) ,(Cast (Var x) t2 t1) ())))
+             (Function (list x) (Cast (Var x) t2 t1) '())))
          `(vector-proxy ,(vector v (apply vector cast-reads)
                                  (apply vector cast-writes)))]
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          (define xs (for/list ([t2 ts2]) (gensym 'x)))
-         `(function ,xs ,(Cast
-                          (Apply (Value v)
-                                 (for/list ([x xs][t1 ts1][t2 ts2])
-                                   (Cast (Var x) t2 t1)))
-                          rt1 rt2) ())]
+         (Function xs (Cast
+                       (Apply (Value v)
+                              (for/list ([x xs][t1 ts1][t2 ts2])
+                                (Cast (Var x) t2 t1)))
+                       rt1 rt2)
+                   '())]
         ))
     
     (define/override ((interp-exp env) e)
       (define (recur e) ((interp-exp env) e))
-      (verbose "Rcast/interp-exp" e)
+      (verbose "Lcast/interp-exp" e)
       (define result
         (match e
           [(Value v) v]
           [(Cast e src tgt)
            (apply-cast (recur e) src tgt)]
           [else ((super interp-exp env) e)]))
-      (verbose "Rcast/interp-exp" e result)
+      (verbose "Lcast/interp-exp" e result)
       result)
     
     ))
 
-(define (interp-Rcast p)
-  (send (new interp-Rcast-class) interp-program p))
+(define (interp-Lcast p)
+  (send (new interp-Lcast-class) interp-program p))
 

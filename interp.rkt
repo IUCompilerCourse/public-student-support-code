@@ -983,10 +983,13 @@
 		(lookup 'rax env^)))]
           )))
 
-    (set! x86-ops (hash-set* x86-ops
-		   'sarq `(2 ,(lambda (n v) (arithmetic-shift v (- n))))
-		   ))
-
+    (set! x86-ops
+          (hash-set* x86-ops
+                     'sarq `(2 ,(lambda (n v) (arithmetic-shift v (- n))))
+                     'salq `(2 ,(lambda (n v)
+                                  (crop-to-64bits (arithmetic-shift v n))))
+                     'orq `(2 ,bitwise-ior)
+                     ))
     
     ));; interp-R3-class
 
@@ -1007,7 +1010,7 @@
       (match fun-val
         #;[`(tagged ,fun-val^ ,t) ;; for dynamically typed
            (apply-fun interp fun-val^ arg-vals)]
-        [`(function (,xs ...) ,body ,lam-env)
+        [(Function xs body lam-env)
          (define new-env (append (map cons xs arg-vals) lam-env))
          ((interp new-env) body)]
         [else (error 'apply-fun "expected function, not ~a" fun-val)]))
@@ -1019,7 +1022,7 @@
     (define/public (interp-scheme-def d)
       (match d
         [(Def f `([,xs : ,ps] ...) rt info body)
-         (mcons f `(function ,xs ,body ()))]
+         (mcons f (Function xs body '()))]
         ))
 
     (define/override (interp-scheme-exp env)
@@ -1046,8 +1049,8 @@
            (let ([top-level (for/list ([d ds]) (interp-scheme-def d))])
              (for ([b top-level])
                (set-mcdr! b (match (mcdr b)
-                              [`(function ,xs ,body ())
-                               `(function ,xs ,body ,top-level)])))
+                              [(Function xs body '())
+                               (Function xs body top-level)])))
 	     ((interp-scheme-exp top-level) body))]
 	  [else ((super interp-scheme env) ast)]
 	  )))
@@ -1078,14 +1081,14 @@
 	(match ast
 	  ;; For R4
 	  [(Def f `([,xs : ,ps] ...) rt info body)
-	   (cons f `(function ,xs ,body))]
+	   (cons f (Function xs body '()))]
 	  [(FunRef f n)
 	   (lookup f env)]
 	  [(Apply fun args)
 	    (define fun-val ((interp-F env) fun))
 	    (define arg-vals (map (interp-F env) args))
 	    (match fun-val
-	       [`(function (,xs ...) ,body)
+	       [(Function xs body fenv)
 		(define new-env (append (map cons xs arg-vals) env))
 		((interp-F new-env) body)]
 	       [else (error "interp-F, expected function, not" fun-val)])]
@@ -1152,7 +1155,7 @@
            (define arg-vals (map (interp-C-exp env) args))
            (define f-val ((interp-C-exp env) f))
            (match f-val
-             [`(function (,xs ...) ,info ,blocks ,def-env)
+             [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f 'start))
               (define new-env (append (map cons xs arg-vals) def-env))
@@ -1173,7 +1176,7 @@
            (define arg-vals (map (interp-C-exp env) args))
            (define f-val ((interp-C-exp env) f))
            (match f-val
-             [`(function (,xs ...) ,info ,blocks ,def-env)
+             [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f 'start))
               (define new-env (append (map cons xs arg-vals) def-env))
@@ -1190,7 +1193,7 @@
       (verbose "R4/interp-C-def" ast)
       (match ast
         [(Def f `([,xs : ,ps] ...) rt info blocks)
-         (mcons f `(function ,xs ((name . ,f)) ,blocks ()))]
+         (mcons f (CFunction xs `((name . ,f)) blocks '()))]
         [else
          (error "R4/interp-C-def unhandled" ast)]
         ))
@@ -1205,8 +1208,8 @@
          ;; tie the knot
          (for/list ([b top-level])
            (set-mcdr! b (match (mcdr b)
-                          [`(function ,xs ,info ,blocks ())
-                           `(function ,xs ,info ,blocks ,top-level)])))
+                          [(CFunction xs info blocks '())
+                           (CFunction xs info blocks top-level)])))
          ((interp-C-tail top-level) (TailCall (Var 'main) '()))]
         [else
          (error "R4/interp-C unhandled" ast)]
@@ -1226,7 +1229,7 @@
     ;; Hide function details to avoid spamming the debug output.
     (define/override (observe-value v)
       (match v
-	[`(function ,info ,blocks ,def-env)
+	[(X86Function info blocks def-env)
          `(function ,(dict-ref info 'name))]
         [else v]))
 
@@ -1234,7 +1237,7 @@
     
     (define/public (call-function f-val cont-ss env)
       (match f-val
-	[`(function ,info ,blocks ,def-env)
+	[(X86Function info blocks def-env)
 	 (debug "interp-x86 call-function" (observe-value f-val))
          (define n (dict-ref info 'num-params))
          (define f (dict-ref info 'name))
@@ -1332,7 +1335,7 @@
     (define/public (interp-x86-def ast)
       (match ast
         [(Def f ps rt info blocks)
-         (cons f `(function ,(dict-set info 'name f) ,blocks ()))]
+         (cons f (X86Function (dict-set info 'name f) blocks '()))]
         ))
         
     ;; The below applies before register allocation
@@ -1345,11 +1348,6 @@
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))
            (define top-level (for/list ([d ds]) (interp-x86-def d)))
-           ;; tie the knot
-           #;(for/list ([b top-level])
-             (set-mcdr! b (match (mcdr b)
-                            [`(function ,xs ,body ())
-                             `(function ,xs ,body ,top-level)])))
            ;; Put the functions in the globals table
            (for ([(label fun) (in-dict top-level)])
              (dict-set! global-label-table label (box fun)))
@@ -1369,20 +1367,9 @@
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))
            (define top-level (for/list ([d ds]) (interp-x86-def d)))
-           ;; tie the knot
-           #;(for/list ([b top-level])
-             (set-mcdr! b (match (mcdr b)
-                            [`(function ,xs ,body ())
-                             `(function ,xs ,body ,top-level)])))
            ;; Put the functions in the globals table
            (for ([(label fun) (in-dict top-level)])
              (dict-set! global-label-table label (box fun)))
-           
-           ;; (define spills (dict-ref info 'num-spills))
-           ;; (define variable-size 8) ;; ugh -Jeremy
-           ;; (define root-size (* variable-size (cdr spills)))
-           ;; (define env^ (list (cons 'r15 (+ root-size
-           ;;                                  (unbox rootstack_begin)))))
            (define env^ '())
            (define result-env
              (call-function (lookup 'main top-level) '() env^))
@@ -1412,9 +1399,9 @@
       (match op
          ['procedure-arity (lambda (v)
                             (match v
-                              [`(function (,xs ...) ,body ,lam-env)
+                              [(Function xs body lam-env)
                                (length xs)]
-                              [(vector `(function ,ps ,rst ...) vs ... `(arity ,n))
+                              [(vector (Function ps body env) vs ... `(arity ,n))
                                n]
                               [else
                                (error 'interp-op "expected function, not ~a" v)]
@@ -1428,7 +1415,7 @@
 	(verbose "R5/interp-scheme" ast)
 	(match ast
 	  [(Lambda `([,xs : ,Ts] ...) rT body)
-	   `(function ,xs ,body ,env)]
+	   (Function xs body env)]
 	  [else ((super interp-scheme-exp env) ast)]
           )))
 
@@ -1437,9 +1424,9 @@
         (define result
 	(match ast
 	  [(Lambda `([,xs : ,Ts] ...) rT body)
-	   `(function ,xs ,body ,env)]
+	   (Function xs body env)]
 	  [(Def f `([,xs : ,ps] ...) rt info body)
-	   (mcons f `(function ,xs ,body))]
+	   (mcons f (Function xs body '()))]
 	  [(ProgramDefs info ds)
 	   ((initialize!) runtime-config:rootstack-size
 	    runtime-config:heap-size)
@@ -1447,8 +1434,8 @@
 	     ;; tie the knot
 	     (for/list ([b top-level])
 	       (set-mcdr! b (match (mcdr b)
-			      [`(function ,xs ,body)
-			       `(function ,xs ,body ,top-level)])))
+			      [(Function xs body '())
+			       (Function xs body top-level)])))
 	     ((interp-F top-level) (Apply (Var 'main) '())))]
           [(Closure arity args)
 	   (define arg-vals (map (interp-F env) args))
@@ -1596,12 +1583,12 @@
            #:when (andmap symbol? xs)
            #;(define anys (for/list ([x xs]) 'Any))
            #;(mcons f `(tagged (lambda ,xs ,body) (,anys -> Any)))
-           (mcons f `(function ,xs ,body))]
+           (mcons f (Function xs body '()))]
 	  [(Lambda xs _ body)
            #:when (andmap symbol? xs)
            #;(define anys (for/list ([x xs]) 'Any))
 	   #;`(tagged ,(lambda ,xs ,body ,env) (,anys -> Any))
-           `(function ,xs ,body ,env)]
+           (Function xs body env)]
 	  [(FunRef f n)
 	   (lookup f env)]
           [(Prim 'and (list e1 e2))
@@ -1610,8 +1597,6 @@
                #f)]
 	  [(Prim op args)
            (apply (interp-op op) (map (interp-F env) args))]
-          [(Exit)
-           (error 'interp-F "exiting")]
 	  [(ProgramDefs info ds)
 	   ((initialize!) runtime-config:rootstack-size
 	    runtime-config:heap-size)
@@ -1622,8 +1607,8 @@
                               ;; the following belongs in new R7 interp
                              #;[`(tagged (lambda ,xs ,body) ,t)
                                `(tagged (lambda ,xs ,body ,top-level) ,t)]
-			      [`(function ,xs ,body)
-			       `(function ,xs ,body ,top-level)])))
+			      [(Function xs body '())
+			       (Function xs body top-level)])))
 	     ((interp-F top-level) (Apply (Var 'main) '())))]
 	  [else ((super interp-F env) ast)]
 	  ))
@@ -1648,8 +1633,6 @@
 	       (error "in project, expected injected value" v)])]
           [(ValueOf e ty)
            ((interp-op 'value-of-any) ((interp-C-exp env) e))]
-          [(Exit)
-           (error 'interp-C-exp "exiting")]
 	  [else
 	   ((super interp-C-exp env) ast)]
 	  ))
@@ -1676,12 +1659,6 @@
 		`(tagged void Void)])]
 	[else (super display-by-type ty val)]))
 
-    (inherit-field x86-ops)
-    (set! x86-ops (hash-set* x86-ops
-		   'orq `(2 ,bitwise-ior)
-		   'salq `(2 ,(lambda (n v)
-                                (crop-to-64bits (arithmetic-shift v n))))))
-
     )) ;; interp-R6-class-alt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1697,7 +1674,7 @@
       (match fun-val
         #;[`(tagged ,fun-val^ ,t) ;; for dynamically typed
            (apply-fun interp fun-val^ arg-vals)]
-        [`(function (,xs ...) ,body ,lam-env)
+        [(Function xs body lam-env)
          (define new-env (append (for/list ([x xs] [arg arg-vals])
                                    (cons x (box arg)))
                                  lam-env))
@@ -1721,8 +1698,8 @@
 	     ;; tie the knot
 	     (for/list ([b top-level])
 	       (set-mcdr! b (match (mcdr b)
-			      [`(function ,xs ,body)
-			       `(function ,xs ,body ,top-level)])))
+			      [(Function xs body '())
+			       (Function xs body top-level)])))
 	     ((interp-F top-level) (Apply (FunRef 'main 0) '())))]
           [(WhileLoop cnd body)
            (define (loop)
@@ -1769,6 +1746,7 @@
     (inherit memory-read memory-write! call-function interp-x86-exp)
 
     (define (interp-vector-length vec)
+      (copious "gradual/interp-vector-length" vec)
       (define tag ((memory-read) vec))
       (bitwise-and #b111111 (arithmetic-shift tag -1)))
 
@@ -1791,8 +1769,10 @@
       (equal? 1 (bitwise-and (arithmetic-shift tag -57) 1)))
     
     (define (proxy-vector-length vec)
+      (copious "gradual/proxy-vector-length" vec)
       (cond [(vector-proxy? vec)
              (define vec^ (interp-vector-ref vec 0))
+             (copious "proxy: underlying vec " vec^)
              (proxy-vector-length vec^)]
             [else (interp-vector-length vec)]))
     

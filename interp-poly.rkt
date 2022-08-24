@@ -17,7 +17,7 @@
     (define/override (interp-def d)
       (match d
         [(Poly ts (Def f (list `[,xs : ,ps] ...) rt _ body))
-         (cons f (box `(function ,xs ,body ())))]
+         (cons f (box (Function xs body '())))]
         [else (super interp-def d)]))
     
     ))

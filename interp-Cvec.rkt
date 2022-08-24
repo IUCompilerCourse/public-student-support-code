@@ -16,7 +16,7 @@
       (lambda (ast)
         (copious "interp-stmt" ast)
         (match ast
-          [(Prim 'vector-set! (list e-vec i e-arg))
+          #;[(Prim 'vector-set! (list e-vec i e-arg))
            ((interp-exp env) ast)
            env]
           ;; TODO: move the following to the interpreter for any

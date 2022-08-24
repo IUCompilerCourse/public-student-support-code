@@ -16,7 +16,7 @@
     
     (define/override ((interp-stmt env) s)
       (match s
-        [(Prim 'read '())
+        [(Prim op es)
          ((interp-exp env) s)
          env]
         [(Assign (Var x) e)

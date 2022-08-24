@@ -15,6 +15,8 @@
         (match s
           [(Assign (Var x) e)
            (dict-set env x ((interp-exp env) e))]
+          [else
+           (error 'interp-stmt "unmatched ~a" s)]
           )))
 
     (define/public (interp-tail env)

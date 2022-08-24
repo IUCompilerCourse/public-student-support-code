@@ -5,6 +5,7 @@
 (require "interp-Cif.rkt")
 (require "interp-Cwhile.rkt")
 (require "interp-Cvec.rkt")
+(require "interp-Cvecof.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
 (provide interp-Cfun interp-Cfun-mixin)
 
@@ -28,14 +29,14 @@
     
     (define/public (call-function fun arg-vals ast)
       (match fun
-        [`(function ,xs ,info ,blocks ,def-env)
+        [(CFunction xs info blocks def-env)
          (define f (dict-ref info 'name))
          (define f-start (symbol-append f 'start))
          (define params-args (for/list ([x xs] [arg arg-vals])
                                (cons x (box arg))))
          (define new-env (append params-args def-env))
          ((interp-tail new-env blocks) (dict-ref blocks f-start))]
-        [else (error 'interp-exp "expected function, not ~a\nin ~v" fun ast)]))
+        [else (error 'interp-exp "expected C function, not ~a\nin ~v" fun ast)]))
     
     (define/override ((interp-exp env) ast)
       (define result
@@ -59,7 +60,7 @@
     (define/override (interp-def ast)
       (match ast
         [(Def f `([,xs : ,ps] ...) rt info blocks)
-         (cons f (box `(function ,xs ((name . ,f)) ,blocks ())))]
+         (cons f (box (CFunction xs `((name . ,f)) blocks '())))]
         [else (error 'interp-def "unhandled" ast)]
         ))
 
@@ -71,8 +72,8 @@
          (define top-level (for/list ([d ds]) (interp-def d)))
          (for/list ([f (in-dict-values top-level)])
            (set-box! f (match (unbox f)
-                          [`(function ,xs ,info ,blocks ())
-                           `(function ,xs ,info ,blocks ,top-level)])))
+                          [(CFunction xs info blocks '())
+                           (CFunction xs info blocks top-level)])))
          ((interp-tail top-level '()) (TailCall (Var 'main) '()))]
         [else (error 'interp-program "unhandled ~a" ast)]
         ))
@@ -81,9 +82,10 @@
 
 (define (interp-Cfun p)
   (define Cfun-class (interp-Cfun-mixin
-                      (interp-Cvec-mixin
-                       (interp-Cwhile-mixin
-                        (interp-Cif-mixin
-                         (interp-Cvar-mixin
-                          interp-Lfun-prime-class))))))
+                      (interp-Cvecof-mixin
+                       (interp-Cvec-mixin
+                        (interp-Cwhile-mixin
+                         (interp-Cif-mixin
+                          (interp-Cvar-mixin
+                           interp-Lfun-prime-class)))))))
   (send (new Cfun-class) interp-program p))

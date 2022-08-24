@@ -17,7 +17,7 @@
       (match op
         ['procedure-arity
          (match-lambda
-           [`(function (,xs ...) ,body ,lam-env)  (length xs)]
+           [(Function xs body lam-env)  (length xs)]
            [v (error 'interp-op "Llambda/expected a function, not ~a" v)])]
         [else (super interp-op op)]))
 
@@ -26,7 +26,7 @@
       (verbose "Llambda/interp-exp" e)
       (match e
         [(Lambda (list `[,xs : ,Ts] ...) rT body)
-         `(function ,xs ,body ,env)]
+         (Function xs body env)]
         [else ((super interp-exp env) e)]))
     ))
 
