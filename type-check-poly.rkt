@@ -29,11 +29,11 @@
         [('Any 'Any) env]
         [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
          (for/fold ([env^ env]) ([pat1 ts1] [t2 ts2])
-           (match-types env^ t2 t2))]
+           (match-types env^ pat1 t2))]
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          (define env^ (match-types env rt1 rt2))
          (for/fold ([env^^ env^]) ([pat1 ts1] [t2 ts2])
-           (match-types env^^ t2 t2))]
+           (match-types env^^ pat1 t2))]
         [(`(All ,xs1 ,t1) `(All ,xs2 ,t2))
          (define env^ (append (map cons xs1 xs2) env))
          (match-types env^ t1 t2)]
