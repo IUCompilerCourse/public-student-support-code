@@ -19,10 +19,10 @@
         [(other wise)
          (super type-equal? t1 t2)]))
     
-    (define/public (match-types env pat1 t2)
-      (verbose 'type-check "match-types" env pat1 t2)
+    (define/public (match-types env param_ty arg_ty)
+      (verbose 'type-check "match-types" env param_ty arg_ty)
       (define result
-      (match* (pat1 t2)
+      (match* (param_ty arg_ty)
         [('Integer 'Integer) env]
         [('Boolean 'Boolean) env]
         [('Void 'Void) env]
@@ -42,8 +42,8 @@
            [#f (error 'type-check "undefined type variable ~a" x)]
            ['Type (cons (cons x t) env)]
            [t^ (check-type-equal? t t^ 'matching) env])]
-        [(other wise) (error 'type-check "mismatch ~a != a" pat1 t2)]))
-      (copious 'match-types "done" pat1 t2 result)
+        [(other wise) (error 'type-check "mismatch ~a != a" param_ty arg_ty)]))
+      (copious 'match-types "done" param_ty arg_ty result)
       result)
 
     (define/public (subst-type env pat1)

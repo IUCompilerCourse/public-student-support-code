@@ -1,29 +1,18 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cvar.rkt")
-(require "type-check-Cif.rkt")
-(require "type-check-Cwhile.rkt")
-(require "type-check-Cvec.rkt")
+(require "type-check-Cvecof.rkt")
 (require "type-check-Lfun.rkt")
-(provide type-check-Cfun type-check-Cfun-mixin)
+(provide type-check-Cfun type-check-Cfun-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Cfun
 
-(define (type-check-Cfun-mixin super-class)
-  (class super-class
+(define type-check-Cfun-class
+  (class (type-check-fun-mixin type-check-Cvecof-class)
     (super-new)
-    (inherit type-check-apply type-check-blocks fun-def-type
+    (inherit type-equal? type-check-apply type-check-blocks fun-def-type
              exp-ready?)
     
-    (define/override (type-equal? t1 t2)
-      (match* (t1 t2)
-        [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
-         (and (for/and ([t1 ts1] [t2 ts2])
-                (type-equal? t1 t2))
-              (type-equal? rt1 rt2))]
-        [(other wise) (super type-equal? t1 t2)]))
-
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
@@ -32,17 +21,6 @@
 	 (apply set-union (cons (recur e) (map recur es)))]
         [(Call f arg*) (apply set-union (cons (recur f) (map recur arg*)))]
         [else (super free-vars-exp e)]))
-    
-    (define/override (type-check-exp env)
-      (lambda (e)
-        (debug 'type-check-exp "Cfun" e)
-        (define recur (type-check-exp env))
-        (match e
-          [(FunRef f n) (values (FunRef f n) (dict-ref env f))]
-          [(Call e es)
-           (define-values (e^ es^ rt) (type-check-apply env e es))
-           (values (Call e^ es^) rt)]
-          [else ((super type-check-exp env) e)])))
     
     (define/override ((type-check-tail env block-env G) t)
       (debug 'type-check-tail "Cfun" t)
@@ -65,7 +43,7 @@
          (void)]
         [else ((super type-check-stmt env) s)]))
     
-    (define/override (type-check-def global-env)
+    (define/public (type-check-def global-env)
       (lambda (d)
         (match d
           [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info blocks)
@@ -94,13 +72,6 @@
         [else (error 'type-check-program "expected a C program, not ~a" p)]
         ))
     ))
-
-(define type-check-Cfun-class (type-check-Cfun-mixin
-                               (type-check-Cvec-mixin
-                                (type-check-Cwhile-mixin
-                                 (type-check-Cif-mixin
-                                  (type-check-Cvar-mixin
-                                   type-check-Lfun-class))))))
 
 (define (type-check-Cfun p)
   (send (new type-check-Cfun-class) type-check-program p))
