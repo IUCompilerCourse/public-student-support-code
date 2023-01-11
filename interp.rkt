@@ -331,7 +331,8 @@
         (match ast
           [(X86Program info blocks)
            (parameterize ([get-basic-blocks blocks])
-             (define start-block (dict-ref blocks 'start))
+             (define start-block (or (dict-ref blocks 'start #f)
+                                     (dict-ref blocks '_start)))
              (define result-env ((interp-x86-block '()) start-block))
              (lookup 'rax result-env))]
           [else (error "R1/interp-x86 no match in for" ast)]
@@ -960,7 +961,9 @@
 	     runtime-config:heap-size)
 	   (define env (cons (cons 'r15 (unbox rootstack_begin)) '()))
 	   (parameterize ([get-basic-blocks blocks])
-	      (let ([env^ ((interp-x86-block env) (dict-ref blocks 'start))])
+	      (let ([env^ ((interp-x86-block env) 
+               (or (dict-ref blocks 'start #f)
+                   (dict-ref blocks '_start)))])
 		(lookup 'rax env^)))]
           )))
 
@@ -979,7 +982,9 @@
 	   (define env (cons (cons 'r15 (+ root-space (unbox rootstack_begin)))
 			     '()))
 	   (parameterize ([get-basic-blocks blocks])
-	      (let ([env^ ((interp-x86-block env) (dict-ref blocks 'start))])
+	      (let ([env^ ((interp-x86-block env) 
+               (or (dict-ref blocks 'start #f)
+                   (dict-ref blocks '_start)))])
 		(lookup 'rax env^)))]
           )))
 
