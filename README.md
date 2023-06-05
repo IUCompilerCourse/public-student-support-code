@@ -53,6 +53,13 @@ This will produce a file named `runtime.o`. The -g flag is to tell the
 compiler to produce debug information that you may need to use
 the gdb (or lldb) debugger.
 
+On a Mac with an M1 (ARM) processor, use the `-arch x86_64` flag to
+compile the runtime:
+```
+   gcc -c -g -std=c99 -arch x86_64 runtime.c
+```
+
+
 Next, suppose your compiler has translated the Racket program in file
 `foo.rkt` into the x86 assembly program in file `foo.s` (The .s filename
 extension is the standard one for assembly programs.) To produce
