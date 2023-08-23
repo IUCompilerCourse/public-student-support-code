@@ -2251,7 +2251,7 @@ Changelog:
 			     (let ([gcc-output (system (format "gcc -g -march=x86-64 -std=c99 runtime.o ./tests/~a.s -o ./tests/~a.out" test-name test-name))])
 			       (if (not gcc-output) (fail "Failed during assembly")
 				   (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
-						    (format " < ./tests/~a.in" test-name)
+						    (string-append " < " (path->string (build-path "tests" (format "~a.in" test-name))))
 						    "")]
 					 [output (if (file-exists? (format "./tests/~a.res" test-name))
 						     (call-with-input-file
@@ -2259,7 +2259,7 @@ Changelog:
 						       (lambda (f) (read-line f)))
 						     "42")]
 					 [error-expected (file-exists? (format "./tests/~a.err" test-name))])
-				     (let* ([command (format "./tests/~a.out ~a" test-name input)]
+				     (let* ([command (string-append (path->string (build-path "tests" (format "~a.out" test-name))) input)]
 					    [result (get-value-or-fail command output)])
 				       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
 				       (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
