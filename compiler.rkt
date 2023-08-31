@@ -58,10 +58,10 @@
   (lambda (e)
     (match e
       [(Var x)
-       (error "TODO: code goes here (uniquify-exp, symbol?)")]
+       (error "TODO: code goes here (uniquify-exp Var)")]
       [(Int n) (Int n)]
       [(Let x e body)
-       (error "TODO: code goes here (uniquify-exp, let)")]
+       (error "TODO: code goes here (uniquify-exp Let)")]
       [(Prim op es)
        (Prim op (for/list ([e es]) ((uniquify-exp env) e)))])))
 
