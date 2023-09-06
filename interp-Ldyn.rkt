@@ -68,7 +68,7 @@
   (define recur (interp-Ldyn-exp env))
   (define result
     (match ast
-      [(Var x) (lookup x env)]
+      [(Var x) (unbox (dict-ref env x))]
       [(FunRef f n) (lookup f env)]
       [(Int n) (Tagged n 'Integer)]
       [(Bool b) (Tagged b 'Boolean)]
@@ -90,7 +90,7 @@
        (vector-set! (Tagged-value vec) (Tagged-value i) arg)
        (Tagged (void) 'Void)]
       [(Let x e body)
-       ((interp-Ldyn-exp (cons (cons x (recur e)) env)) body)]
+       ((interp-Ldyn-exp (dict-set env x (box (recur e)))) body)]
       [(Prim 'and (list e1 e2)) (recur (If e1 e2 (Bool #f)))]
       [(Prim 'or (list e1 e2))
        (define v1 (recur e1))
@@ -113,9 +113,22 @@
         (apply (interp-op op) (for/list ([a args]) (Tagged-value a))))]
       [(If q t f)
        (match (Tagged-value (recur q)) [#f (recur f)] [else (recur t)])]
+      [(GetBang x) (unbox (dict-ref env x))]
+      [(SetBang x rhs)
+       (set-box! (dict-ref env x) (recur rhs))]
+      [(Begin es body)
+       (for ([e es]) (recur e))
+       (recur body)]
+      [(WhileLoop cnd body)
+       (define (loop)
+	 (match (Tagged-value (recur cnd))
+		[#f (tag-value (void))]
+		[else (loop)]))
+       (loop)]
+      [(Void)  (tag-value (void))]
       [(Apply f es)
        (define new-f (recur f))
-       (define args (map recur es))
+       (define args (map (lambda (arg) (box (recur arg))) es))
        (check-tag new-f 'Procedure ast)
        (define f-val (Tagged-value new-f))
        (match f-val 
