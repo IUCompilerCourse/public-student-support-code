@@ -5,6 +5,8 @@
 
 (define MIN-SIZE 4)
 
+;; TODO: add pretty printing
+
 (struct heap ([vec #:mutable] [count #:mutable] <=? notify))
 ;; length(vec)/4 <= size <= length(vec), except size >= MIN-SIZE
 ;; size = next available index

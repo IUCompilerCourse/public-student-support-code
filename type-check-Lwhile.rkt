@@ -1,18 +1,13 @@
 #lang racket
-(require graph)
-(require "multigraph.rkt")
+;(require graph)
+;(require "multigraph.rkt")
 (require "utilities.rkt")
 (require "type-check-Lif.rkt")
-(require "type-check-Cif.rkt")
 (provide type-check-Lwhile type-check-Lwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           while, begin, set!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lwhile
 
 (define type-check-Lwhile-class
   (class type-check-Lif-class
@@ -52,6 +47,9 @@
           [(Void) (values (Void) 'Void)]
           [else ((super type-check-exp env) e)])))
     ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; type-check-Lwhile
 
 (define (type-check-Lwhile p)
   (send (new type-check-Lwhile-class) type-check-program p))

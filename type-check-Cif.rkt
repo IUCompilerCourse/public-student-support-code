@@ -4,15 +4,15 @@
 (require "utilities.rkt")
 (require "type-check-Cvar.rkt")
 (require "type-check-Lif.rkt")
-(provide type-check-Cif type-check-Cif-class type-check-Cif-mixin)
+(provide type-check-Cif type-check-Cif-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Cif
 
-(define (type-check-Cif-mixin super-class)
-  (class super-class
+(define type-check-Cif-class
+  (class (type-check-if-mixin type-check-Cvar-class)
     (super-new)
-    (inherit check-type-equal?)
+    (inherit type-check-exp check-type-equal?)
 
     (define/override (type-equal? t1 t2)
       (debug 'type-equal? "lenient" t1 t2)
@@ -73,28 +73,17 @@
          ((super type-check-atm env) e)]
         ))
     
-    (define/override ((type-check-exp env) e)
-      (debug 'type-check-exp "Cif ~a" e)
-      (match e
-        [(Bool b) (values (Bool b) 'Boolean)]
-        [(Prim 'eq? (list e1 e2))
-         (define-values (e1^ T1) ((type-check-exp env) e1))
-         (define-values (e2^ T2) ((type-check-exp env) e2))
-         (check-type-equal? T1 T2 e)
-         (values (Prim 'eq? (list e1^ e2^)) 'Boolean)]
-        [else
-         ((super type-check-exp env) e)]
-        ))
-    
     (define/override (type-check-stmt env)
       (lambda (s)
-        (debug 'type-check-stmt "Cwhile" s)
+        (debug 'type-check-stmt "Cwhile" s env)
         (match s
           [(Assign (Var x) e)
            #:when (exp-ready? e env)
            (define-values (e^ t) ((type-check-exp env) e))
            (update-type x t env)]
-          [(Assign (Var x) e) (void)]
+          [(Assign (Var x) e)
+           (debug 'type-check-stmt "RHS not ready" e)
+           (void)]
           [(Prim 'read '()) (void)]
           [else (void)]
           )))
@@ -180,34 +169,7 @@
          (CProgram new-info blocks)]
         [else (super type-check-program p)]))
     
-    #;(define/override (type-check-program p)
-      (match p
-        [(CProgram info blocks)
-         ;; We override Cvar for this case to type check all the
-         ;; blocks, even the unreachable ones. -Jeremy
-         (define env (make-hash))
-         (define block-env (make-hash))
-         ;; First, type check the start block and make sure it's Integer
-         (define t
-           ((type-check-tail env block-env blocks) (dict-ref blocks 'start)))
-         (unless (type-equal? t 'Integer)
-           (error "return type of program must be Integer, not" t))
-
-         ;; Type check the unreachable blocks
-         (for ([(label block) (in-dict blocks)])
-           ((type-check-tail env block-env blocks) block))
-
-         (define locals-types (for/list ([(x t) (in-dict env)])
-                                (cons x t)))
-         (define new-info (dict-set info 'locals-types locals-types))
-         (CProgram new-info blocks)]
-        [else (error 'type-check-program "expected a C program, not ~a" p)]))
-
     ))
-
-(define type-check-Cif-class (type-check-Cif-mixin
-                              (type-check-Cvar-mixin
-                               type-check-Lif-class)))
 
 (define (type-check-Cif p)
   (send (new type-check-Cif-class) type-check-program p))

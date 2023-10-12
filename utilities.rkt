@@ -2253,26 +2253,26 @@ Changelog:
 					"gcc -g -std=c99 -arch x86_64"
 					"gcc -g -std=c99")])
 		       (let ([gcc-output (system (format "~a runtime.o ./tests/~a.s -o ./tests/~a.out" gcc-cmd test-name test-name))])
-		       (if (not gcc-output) (fail "Failed during assembly")
-			   (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
-					    (format " < ./tests/~a.in" test-name)
-					    "")]
-				 [output (if (file-exists? (format "./tests/~a.res" test-name))
-					     (call-with-input-file
-						 (format "./tests/~a.res" test-name)
-					       (lambda (f) (read-line f)))
-					     "42")]
-				 [error-expected (file-exists? (format "./tests/~a.err" test-name))])
-			     (let* ([command (format "./tests/~a.out ~a" test-name input)]
-				    [result (get-value-or-fail command output)])
-			       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
-			       (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
-			       (cond [error-expected
-				      (check-equal? (cadr result) 'done-error (format "expected error, not: ~a" (caddr result)))
-				      (check-equal? (caddr result) 255 (format "expected error, not: ~a" (caddr result)))]
-				     [else
-				      (check-not-eq? (cadr result) eof "x86 execution did not produce output")
-				      (check result-check (caddr result) output "Mismatched output from x86 execution")])))))))))))))))
+			 (if (not gcc-output) (fail "Failed during assembly")
+			     (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
+					      (format " < ./tests/~a.in" test-name)
+					      "")]
+				   [output (if (file-exists? (format "./tests/~a.res" test-name))
+					       (call-with-input-file
+						   (format "./tests/~a.res" test-name)
+						 (lambda (f) (read-line f)))
+					       "42")]
+				   [error-expected (file-exists? (format "./tests/~a.err" test-name))])
+			       (let* ([command (format "./tests/~a.out ~a" test-name input)]
+				      [result (get-value-or-fail command output)])
+				 (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
+				 (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
+				 (cond [error-expected
+					(check-equal? (cadr result) 'done-error (format "expected error, not: ~a" (caddr result)))
+					(check-equal? (caddr result) 255 (format "expected error, not: ~a" (caddr result)))]
+				       [else
+					(check-not-eq? (cadr result) eof "x86 execution did not produce output")
+					(check result-check (caddr result) output "Mismatched output from x86 execution")])))))))))))))))
 
 (define (compiler-tests name typechecker passes test-family test-nums)
   (run-tests (compiler-tests-suite name typechecker passes test-family test-nums) (test-verbosity)))

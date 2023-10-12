@@ -1,17 +1,13 @@
 #lang racket
-;(require graph)
-;(require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Lwhile.rkt")
-(require "type-check-Cvar.rkt")
 (require "type-check-Cif.rkt")
-(provide type-check-Cwhile type-check-Cwhile-mixin type-check-Cwhile-class)
+(provide type-check-Cwhile type-check-Cwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Cwhile
 
-(define (type-check-Cwhile-mixin super-class)
-  (class super-class
+(define type-check-Cwhile-class
+  (class type-check-Cif-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -22,7 +18,6 @@
         [else
          t1]))
 
-    ;; TODO: move some things from here to later type checkers
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
@@ -68,28 +63,7 @@
           [(Void) (values (Void) 'Void)]
           [else ((super type-check-exp env) e)])))
     
-    
-    #;(define/override (type-check-program p)
-      (match p
-        [(CProgram info blocks)
-         (define empty-env (make-hash))
-         (define-values (env t)
-           (type-check-blocks info blocks empty-env 'start))
-         (unless (type-equal? t 'Integer)
-           (error "return type of program must be Integer, not" t))
-         (define locals-types
-           (for/list ([(x t) (in-dict env)])
-             (cons x t)))
-         (define new-info (dict-set info 'locals-types locals-types))
-         (CProgram new-info blocks)]
-        [else (super type-check-program p)]))
-
     ))
-
-(define type-check-Cwhile-class (type-check-Cwhile-mixin
-                                 (type-check-Cif-mixin
-                                  (type-check-Cvar-mixin
-                                   type-check-Lwhile-class))))
 
 (define (type-check-Cwhile p)
   (send (new type-check-Cwhile-class) type-check-program p))
