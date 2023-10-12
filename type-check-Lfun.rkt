@@ -1,28 +1,22 @@
 #lang racket
 (require "utilities.rkt")
+(require "type-check-Lvec.rkt")
 (require "type-check-Lvecof.rkt")
-(provide type-check-Lfun type-check-Lfun-class)
+(provide type-check-Lfun type-check-Lfun-has-type
+         type-check-Lfun-class type-check-fun-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Functions                                                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lfun
+;; type-check-fun-mixin (for use in Lfun and Cfun)
 
-;; TODO: Don't allow eq? on function types. -Jeremy
-
-(define type-check-Lfun-class
-  (class type-check-Lvecof-class
+(define (type-check-fun-mixin super-class)
+  (class super-class
     (super-new)
     (inherit check-type-equal?)
-
-    (field [max-parameters 32])
-
-    ;; Need lenient checking for closure conversion.
-    ;; Putting it here instead of in lambda because the C-level type
-    ;; checkers also need it and inherit from this type checker.
-
+    
     (define/override (type-equal? t1 t2)
       (match* (t1 t2)
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
@@ -42,17 +36,40 @@
          (values e^ e* rt)]
         [else (error 'type-check "expected a function, not ~a" ty)]))
 
+    (define/public (fun-def-type d)
+      (match d [(Def f (list `[,xs : ,ps] ...) rt info body)  `(,@ps -> ,rt)]
+        [else (error 'type-check "ill-formed function definition in ~a" d)]))
+
     (define/override (type-check-exp env)
       (lambda (e)
         (match e
           [(FunRef f n)
            (values (FunRef f n)  (dict-ref env f))]
-          [(Apply e es)
-           (define-values (e^ es^ rt) (type-check-apply env e es))
-           (values (Apply e^ es^) rt)]
           [(Call e es)
            (define-values (e^ es^ rt) (type-check-apply env e es))
            (values (Call e^ es^) rt)]
+          [else ((super type-check-exp env) e)]
+          )))
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; type-check-Lfun
+
+;; TODO: Don't allow eq? on function types. -Jeremy
+
+(define type-check-Lfun-class
+  (class (type-check-fun-mixin type-check-Lvecof-class)
+    (super-new)
+    (inherit check-type-equal? type-check-apply fun-def-type)
+
+    (field [max-parameters 32])
+
+    (define/override (type-check-exp env)
+      (lambda (e)
+        (match e
+          [(Apply e es)
+           (define-values (e^ es^ rt) (type-check-apply env e es))
+           (values (Apply e^ es^) rt)]
           [else ((super type-check-exp env) e)]
           )))
 
@@ -69,10 +86,6 @@
            (Def f p:t* rt info body^)]
           [else (error 'type-check "ill-formed function definition ~a" e)]
           )))	 
-
-    (define/public (fun-def-type d)
-      (match d [(Def f (list `[,xs : ,ps] ...) rt info body)  `(,@ps -> ,rt)]
-        [else (error 'type-check "ill-formed function definition in ~a" d)]))
 
     (define/override (type-check-program e)
       (match e
@@ -98,4 +111,13 @@
 
 (define (type-check-Lfun p)
   (send (new type-check-Lfun-class) type-check-program p))
+
+(define (type-check-Lfun-has-type p)
+  (begin
+    (typed-vec #t)
+    (typed-vecof #t)
+    (define t (type-check-Lfun p))
+    (typed-vec #f)
+    (typed-vecof #f)
+    t))
 

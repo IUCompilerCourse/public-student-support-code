@@ -26,9 +26,14 @@ static int initialized = 0;
     A '1' is a pointer, a '0' is not a pointer.
 */
 static const int TAG_IS_NOT_FORWARD_MASK = 1;
-static const int TAG_LENGTH_MASK = 126; // 1111110
-static const int TAG_LENGTH_RSHIFT = 1;
-static const int TAG_PTR_BITFIELD_RSHIFT = 7;
+
+static const int TAG_VEC_LENGTH_MASK = 126; // 1111110
+static const int TAG_VEC_LENGTH_RSHIFT = 1;
+static const int TAG_VEC_PTR_BITFIELD_RSHIFT = 7;
+
+static const int TAG_VECOF_LENGTH_RSHIFT = 2;
+static const int TAG_VECOF_PTR_BITFIELD_RSHIFT = 1;
+static const int TAG_VECOF_RSHIFT = 63;
 
 // cheney implements cheney's copying collection algorithm
 // There is a stub and explaination below.
@@ -40,14 +45,36 @@ static inline int is_forwarding(int64_t tag) {
   return !(tag & TAG_IS_NOT_FORWARD_MASK);
 }
 
-// Get the length field out of a tag.
-static inline int get_length(int64_t tag){
-  return (tag & TAG_LENGTH_MASK) >> TAG_LENGTH_RSHIFT;
+static inline int is_vecof(int64_t tag) {
+  return (tag >> TAG_VECOF_RSHIFT);
 }
 
-// Get the "is pointer bitfield" out of a tag.
-static inline int64_t get_ptr_bitfield(int64_t tag){
-  return tag >> TAG_PTR_BITFIELD_RSHIFT;
+// Get the length field out of a vector's tag.
+// It is contained in bits [1,6].
+static inline int get_vector_length(int64_t tag){
+  return (tag & TAG_VEC_LENGTH_MASK) >> TAG_VEC_LENGTH_RSHIFT;
+}
+
+// Get the "is pointer bitfield" out of a vector's tag.
+static inline int64_t get_vec_ptr_bitfield(int64_t tag){
+  return tag >> TAG_VEC_PTR_BITFIELD_RSHIFT;
+}
+
+// Get the length field out of a vectorof's tag.
+static inline int get_vecof_length(int64_t tag){
+  return ((tag << 1) >> 1) >> TAG_VECOF_LENGTH_RSHIFT;
+}
+
+// Get the "is pointer bitfield" out of a vectorof's tag.
+static inline int64_t get_vecof_ptr_bitfield(int64_t tag){
+  return (tag >> TAG_VECOF_PTR_BITFIELD_RSHIFT) & 1;
+}
+
+static inline int get_vec_length(int64_t tag){
+  if (is_vecof(tag))
+    return get_vecof_length(tag);
+  else
+    return get_vector_length(tag);
 }
 
 // The following needs to stay in sync with the any-tag function
@@ -56,10 +83,11 @@ static inline int64_t get_ptr_bitfield(int64_t tag){
 #define ANY_TAG_LEN 3
 
 #define ANY_TAG_INT 1    // 001
-#define ANY_TAG_BOOL 4   // 100
-#define ANY_TAG_VOID 5   // 101
 #define ANY_TAG_VEC 2    // 010
 #define ANY_TAG_FUN 3    // 011
+#define ANY_TAG_BOOL 4   // 100
+#define ANY_TAG_VOID 5   // 101
+#define ANY_TAG_VECOF 6  // 110
 #define ANY_TAG_PTR 0 // not an any, a raw pointer
 
 int any_tag(int64_t any) {
@@ -72,7 +100,7 @@ int is_ptr(int64_t* p) {
     return 0;
   } else {
     int t = any_tag(q);
-    return t == ANY_TAG_PTR || t == ANY_TAG_VEC;
+    return t == ANY_TAG_PTR || t == ANY_TAG_VEC || t == ANY_TAG_VECOF;
   }
 }
 
@@ -121,6 +149,29 @@ void initialize(uint64_t rootstack_size, uint64_t heap_size)
   // Useful for debugging
   initialized = 1;
 
+}
+
+void validate_vector(int64_t** scan_addr) {
+  int64_t* scan_ptr = *scan_addr;
+  int64_t tag = *scan_ptr;
+  if (is_vecof(tag)) {
+    exit(EXIT_FAILURE);
+  } else {
+    unsigned char len = get_vector_length(tag);
+    int64_t isPtrBits = get_vec_ptr_bitfield(tag);
+    int64_t* data = scan_ptr + 1;
+    *scan_addr = scan_ptr + len + 1;
+    for (unsigned char i = 0; i != len; i++){
+      if ((isPtrBits >> i) & 1){
+        int64_t* ptr = (int64_t*) data[i];
+        if (is_ptr(ptr)) {
+          int64_t* real_ptr = to_ptr(ptr);
+          assert(real_ptr < fromspace_end);
+          assert(real_ptr >= fromspace_begin);
+        }
+      }
+    }
+  }
 }
 
 void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
@@ -233,25 +284,24 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     (int64_t)fromspace_begin, (int64_t)fromspace_end);*/
   int64_t* scan_ptr = fromspace_begin;
   while (scan_ptr != free_ptr){
+    validate_vector(&scan_ptr);
+#if 0
     int64_t tag = *scan_ptr;
-    unsigned char len = get_length(tag);
-    //printf("\tlen %d\n", (int)len);
-    int64_t isPtrBits = get_ptr_bitfield(tag);
+    unsigned char len = get_vector_length(tag);
+    int64_t isPtrBits = get_vec_ptr_bitfield(tag);
     int64_t* data = scan_ptr + 1;
     scan_ptr = scan_ptr + len + 1;
     for (unsigned char i = 0; i != len; i++){
       if ((isPtrBits >> i) & 1){
         int64_t* ptr = (int64_t*) data[i];
 	if (is_ptr(ptr)) {
-	  /*printf("\ti: %d, ptr: %lld, to_ptr: %lld", i,
-		 (int64_t)ptr,
-		 (int64_t)to_ptr(ptr));*/
 	  int64_t* real_ptr = to_ptr(ptr);
 	  assert(real_ptr < fromspace_end);
 	  assert(real_ptr >= fromspace_begin);
 	}
       }
     }
+#endif
   }
 #endif
 
@@ -301,6 +351,51 @@ static void copy_vector(int64_t** vector_ptr_loc);
   versa.
 */
 
+void process_vector(int64_t** scan_addr) {
+  
+  // Since this tag is already in tospace we know that it isn't
+  // a forwarding pointer.
+  int64_t tag = **scan_addr;
+  
+  if (is_vecof(tag)) {
+    int len = get_vecof_length(tag);
+    int eltsArePointers = get_vecof_ptr_bitfield(tag);
+    int64_t* next_ptr = *scan_addr + len + 1;
+    *scan_addr += 1;
+    while(*scan_addr != next_ptr){
+      if (eltsArePointers == 1) {
+        copy_vector((int64_t**)*scan_addr);
+      }
+      *scan_addr += 1;
+    }
+  } else {
+    
+    int len = get_vector_length(tag);
+
+    // Find the next vector or the next free_ptr;
+    // with is len + 1 away from the current;
+    int64_t* next_ptr = *scan_addr + len + 1;
+
+    // each bit low to high says if the next index is a ptr
+    int64_t isPointerBits = get_vec_ptr_bitfield(tag);
+
+    // Advance the scan_addr then check to
+    // see if we have arrived at the beginning of the next array.
+    *scan_addr += 1;
+    while(*scan_addr != next_ptr){
+      if ((isPointerBits & 1) == 1) {
+        // since the tag says that the scan ptr in question is a
+        // ptr* we known that *scan_addr currently points to a ptr*
+        // and must be a ptr** itself.
+        copy_vector((int64_t**)*scan_addr);
+      }
+      // Advance the tag so the next check is for the next scan ptr
+      isPointerBits = isPointerBits >> 1;
+      *scan_addr += 1;
+    }
+  }
+}
+
 void cheney(int64_t** rootstack_ptr)
 {
   // printf("cheney: starting copy, rootstack=%p\n", rootstack_ptr);
@@ -325,6 +420,8 @@ void cheney(int64_t** rootstack_ptr)
      from space.
   */
   while (scan_ptr != free_ptr) {
+    process_vector(&scan_ptr);
+#if 0
     /*
        I inlined this to leave maniuplation of scan_ptr to a single
        function. This can be accomplished by passing the location
@@ -340,14 +437,14 @@ void cheney(int64_t** rootstack_ptr)
     int64_t tag = *scan_ptr;
 
     // the length of the vector is contained in bits [1,6]
-    int len = get_length(tag);
+    int len = get_vector_length(tag);
 
     // Find the next vector or the next free_ptr;
     // with is len + 1 away from the current;
     int64_t* next_ptr = scan_ptr + len + 1;
 
     // each bit low to high says if the next index is a ptr
-    int64_t isPointerBits = get_ptr_bitfield(tag);
+    int64_t isPointerBits = get_vec_ptr_bitfield(tag);
 
     // Advance the scan_ptr then check to
     // see if we have arrived at the beginning of the next array.
@@ -363,7 +460,7 @@ void cheney(int64_t** rootstack_ptr)
       isPointerBits = isPointerBits >> 1;
       scan_ptr += 1;
     }
-
+#endif
   }
 
   /* swap the tospace and fromspace */
@@ -462,30 +559,27 @@ void copy_vector(int64_t** vector_ptr_loc)
     // Since we are about to jumble all the pointers around lets
     // set up some structure to the world.
 
+    // The new vector is going to be where the free_ptr currently points.
+    int64_t* new_vector_ptr = free_ptr;
+#if 0
+      printf("\tto address: %ld\n", (int64_t)new_vector_ptr);
+#endif
+      
     // The tag we grabbed earlier contains some usefull info for
     // forwarding copying the vector.
-    int length = get_length(tag);
+    int length = get_vec_length(tag);
 #if 0
     printf("\tlen: %d\n", length);
 #endif
-
-    // The new vector is going to be where the free int64_t pointer
-    // currently points.
-    int64_t* new_vector_ptr = free_ptr;
-#if 0
-    printf("\tto address: %ld\n", (int64_t)new_vector_ptr);
-#endif
-
     // Copy the old vector to the new one.
     // The "length" is the number of elements, so to include the
     // tag, we need to iterate from 0 to length + 1;
     for (int i = 0; i != length + 1; i++){
       new_vector_ptr[i] = old_vector_ptr[i];
     }
-
     // the free ptr can be updated to point to the next free ptr.
     free_ptr = free_ptr + length + 1;
-
+    
     // We need to set the forwarding pointer in the old_vector
     old_vector_ptr[0] = (int64_t) new_vector_ptr;
 
@@ -555,7 +649,7 @@ void print_any(int64_t any) {
   case ANY_TAG_VEC: {
     int64_t* vector_ptr = (int64_t*) (any & ~ANY_TAG_MASK);
     int64_t tag = vector_ptr[0];
-    unsigned char len = get_length(tag);
+    unsigned char len = get_vector_length(tag);
     printf("#(");
     for (int i = 0; i != len; ++i) {
       print_any(vector_ptr[i + 1]); // this is wrong -Jeremy
@@ -594,26 +688,30 @@ void print_heap(int64_t** rootstack_ptr)
 void print_vector(int64_t* vector_ptr)
 {
   int64_t tag = vector_ptr[0];
-  unsigned char len = get_length(tag);
-  int64_t* scan_ptr = vector_ptr;
-  int64_t* next_ptr = vector_ptr + len + 1;
+  if (is_vecof(tag)) {
+    exit(EXIT_FAILURE);
+  } else {
+    unsigned char len = get_vector_length(tag);
+    int64_t* scan_ptr = vector_ptr;
+    int64_t* next_ptr = vector_ptr + len + 1;
 
-  printf("%lld=#(", (int64_t)vector_ptr);
-  scan_ptr += 1;
-  int64_t isPointerBits = get_ptr_bitfield(tag);
-  while (scan_ptr != next_ptr) {
-    if ((isPointerBits & 1) == 1 && is_ptr((int64_t*)*scan_ptr)) {
-      print_vector(to_ptr((int64_t*)*scan_ptr));
-    } else {
-      printf("%lld", (int64_t)*scan_ptr);
-    }
-    isPointerBits = isPointerBits >> 1;
+    printf("%lld=#(", (int64_t)vector_ptr);
     scan_ptr += 1;
-    if (scan_ptr != next_ptr) {
-      printf(", ");
+    int64_t isPointerBits = get_vec_ptr_bitfield(tag);
+    while (scan_ptr != next_ptr) {
+      if ((isPointerBits & 1) == 1 && is_ptr((int64_t*)*scan_ptr)) {
+        print_vector(to_ptr((int64_t*)*scan_ptr));
+      } else {
+        printf("%lld", (int64_t)*scan_ptr);
+      }
+      isPointerBits = isPointerBits >> 1;
+      scan_ptr += 1;
+      if (scan_ptr != next_ptr) {
+        printf(", ");
+      }
     }
+    printf(")");
   }
-  printf(")");
 }
 
 
@@ -637,7 +735,7 @@ int64_t proxy_vector_length(int64_t* vec) {
     int64_t vec2 = vec[1];
     return proxy_vector_length((int64_t*) vec2);
   } else {
-    return get_length(vec[0]);
+    return get_vector_length(vec[0]);
   }
 }
 

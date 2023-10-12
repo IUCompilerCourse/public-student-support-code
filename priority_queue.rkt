@@ -5,6 +5,8 @@
 
 ;; priority queue (smallest priority first)
 
+;; TODO: add pretty printing
+
 (struct node ([key #:mutable] [index #:mutable #:auto])
 	#:methods gen:custom-write
 	[(define (write-proc node port mode)
