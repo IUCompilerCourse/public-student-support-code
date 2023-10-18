@@ -22,7 +22,7 @@
       (append '((* . ((Integer Integer) . Integer))
                 (exit . (() . _)))
               (super operator-types)))
-    
+
     (define/override (type-check-exp env)
       (lambda (e)
         (debug 'type-check-exp "vecof" e)
@@ -58,10 +58,13 @@
              [else ((super type-check-exp env) e)])]
           [(Prim 'vectorof-length (list e1))
            (define-values (e1^ t1) (recur e1))
+	   (debug 'type-check-exp "vectorof-length type: " t1)
            (match t1
              [`(Vectorof ,t)
               (values (Prim 'vectorof-length (list e1^))  'Integer)]
-             [else ((super type-check-exp env) e)])]
+             [else
+	      ;; error here instead? -Jeremy
+	      ((super type-check-exp env) e)])]
 
           [(AllocateArray e1 t)
            (define-values (e1^ t1) (recur e1))

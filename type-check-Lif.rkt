@@ -15,6 +15,20 @@
     (super-new)
     (inherit check-type-equal?)
     
+    (define/override (type-equal? t1 t2)
+      (debug 'type-equal? "lenient" t1 t2)
+      (match* (t1 t2)
+        [('_ t2) #t]
+        [(t1 '_) #t]
+        [(other wise) (super type-equal? t1 t2)]))
+    
+    (define/public (combine-types t1 t2)
+      (match (list t1 t2)
+        [(list '_ t2) t2]
+        [(list t1 '_) t1]
+        [else
+         t1]))
+    
     (define/override (operator-types)
       (append '((and . ((Boolean Boolean) . Boolean))
                 (or . ((Boolean Boolean) . Boolean))
@@ -45,8 +59,8 @@
 (define type-check-Lif-class
   (class (type-check-if-mixin type-check-Lvar-class)
     (super-new)
-    (inherit check-type-equal?)
-    
+    (inherit check-type-equal? combine-types)
+
     (define/override (type-check-exp env)
       (lambda (e)
         (match e
@@ -56,7 +70,7 @@
            (define-values (els^ Te) ((type-check-exp env) els))
            (check-type-equal? Tc 'Boolean e)
            (check-type-equal? Tt Te e)
-           (values (If cnd^ thn^ els^) Te)]
+           (values (If cnd^ thn^ els^) (combine-types Tt Te))]
           [else ((super type-check-exp env) e)])))
     ))
 

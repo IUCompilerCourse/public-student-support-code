@@ -12,21 +12,7 @@
 (define type-check-Cif-class
   (class (type-check-if-mixin type-check-Cvar-class)
     (super-new)
-    (inherit type-check-exp check-type-equal?)
-
-    (define/override (type-equal? t1 t2)
-      (debug 'type-equal? "lenient" t1 t2)
-      (match* (t1 t2)
-        [('_ t2) #t]
-        [(t1 '_) #t]
-        [(other wise) (super type-equal? t1 t2)]))
-    
-    (define/public (combine-types t1 t2)
-      (match (list t1 t2)
-        [(list '_ t2) t2]
-        [(list t1 '_) t1]
-        [else
-         t1]))
+    (inherit type-check-exp type-equal? check-type-equal? combine-types)
 
     ;; TODO: move some things from here to later type checkers
     (define/public (free-vars-exp e)
