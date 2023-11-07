@@ -27,7 +27,9 @@
          `(Vectorof ,(join t1 t2))]
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          `(,@(for/list ([t1 ts1] [t2 ts2]) (join t1 t2))
-           -> ,(join rt1 rt2))]))
+           -> ,(join rt1 rt2))]
+	[else (error 'join "unhandled case types ~a ~a" t1 t2)]
+	))
 
     (define/public (meet t1 t2)
       (match* (t1 t2)
@@ -38,11 +40,13 @@
         [(t1 'Any) 'Any]
         [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
          `(Vector ,@(for/list ([t1 ts1] [t2 ts2]) (meet t1 t2)))]
-        [(`(Vector ,t1) `(Vectorof ,t2))
+        [(`(Vectorof ,t1) `(Vectorof ,t2))
          `(Vectorof ,(meet t1 t2))]
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          `(,@(for/list ([t1 ts1] [t2 ts2]) (meet t1 t2))
-           -> ,(meet rt1 rt2))]))
+           -> ,(meet rt1 rt2))]
+	[else (error 'meet "unhandled case types ~a ~a" t1 t2)]
+	))
      
     ))
 
@@ -154,7 +158,10 @@
 	   (match t
              [`(Vector ,ts ...)
               (values (Prim 'vector-length (list e1^)) 'Integer)]
-             ['Any (values (Prim 'vector-length (list e1^)) 'Integer)])]
+             ['Any (values (Prim 'vector-length (list e1^)) 'Integer)]
+	     [`(Vectorof ,elt-type)
+	      (error 'type-check "unhandled Vectorof in vector-length")]
+	     )]
 	  [(Prim 'vector-ref (list e1 e2))
            (define-values (e1^ t1) (recur e1))
            (define-values (e2^ t2) (recur e2))

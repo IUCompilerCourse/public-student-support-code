@@ -535,7 +535,30 @@ Changelog:
                [(eq? (AST-output-syntax) 'abstract-syntax)
                 (csp ast port mode)]
                ))))])
-  
+
+(struct X86ProgramDefs (info def*) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'X86ProgramDefs)
+                 (lambda (obj) (list (X86ProgramDefs-info obj)
+                                     (X86ProgramDefs-def* obj)
+                                     )))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(X86ProgramDefs info def*)
+                     (write-string "functions:" port)
+                     (newline port)
+                     (for ([def def*])
+                       (recur def port)
+                       (newline port)(newline port))
+                     ]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
 (struct CProgram (info blocks)
   #:transparent
   #:property prop:custom-print-quotable 'never
