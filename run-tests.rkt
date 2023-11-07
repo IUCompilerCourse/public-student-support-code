@@ -24,9 +24,8 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
+;; The following tests the intermediate-language outputs of the passes.
 (interp-tests "var" #f compiler-passes interp-Lvar "var_test" (tests-for "var"))
 
-;; Uncomment the following when all the passes are complete to
-;; test the final x86 code.
+;; The following tests the final x86 code.
 (compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))
-
