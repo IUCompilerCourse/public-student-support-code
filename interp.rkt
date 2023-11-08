@@ -1343,7 +1343,7 @@
       (lambda (ast)
         (copious "R4/interp-pseudo-x86" ast)
 	(match ast
-          [(ProgramDefs info ds)
+          [(X86ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))
@@ -1362,7 +1362,7 @@
       (lambda (ast)
         (verbose "R4/interp-x86" ast)
 	(match ast
-          [(ProgramDefs info ds)
+          [(X86ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))
