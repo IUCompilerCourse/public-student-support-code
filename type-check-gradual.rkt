@@ -28,7 +28,7 @@
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          `(,@(for/list ([t1 ts1] [t2 ts2]) (join t1 t2))
            -> ,(join rt1 rt2))]
-	[else (error 'join "unhandled case types ~a ~a" t1 t2)]
+	[(other wise) (error 'join "unhandled case types ~a ~a" t1 t2)]
 	))
 
     (define/public (meet t1 t2)
@@ -45,7 +45,7 @@
         [(`(,ts1 ... -> ,rt1) `(,ts2 ... -> ,rt2))
          `(,@(for/list ([t1 ts1] [t2 ts2]) (meet t1 t2))
            -> ,(meet rt1 rt2))]
-	[else (error 'meet "unhandled case types ~a ~a" t1 t2)]
+	[(other wise) (error 'meet "unhandled case types ~a ~a" t1 t2)]
 	))
      
     ))

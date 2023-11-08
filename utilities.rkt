@@ -81,6 +81,7 @@ Changelog:
          (struct-out ProgramDefs)
          (struct-out CProgram)
          (struct-out X86Program)
+         (struct-out X86ProgramDefs)
          (contract-out [struct WhileLoop ((cnd exp?) (body exp?))])
          (contract-out [struct SetBang ((var symbol?) (rhs exp?))])
          (contract-out [struct GetBang ((var symbol?))])
