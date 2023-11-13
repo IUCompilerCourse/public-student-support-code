@@ -12,6 +12,16 @@
     (super-new)
     (inherit type-equal? exp-ready?)
 
+    (define/override (type-check-exp env)
+      (lambda (e)
+        (debug 'type-check-exp "Clambda" e)
+        (define recur (type-check-exp env))
+        (match e
+          [(UncheckedCast e t)
+           (define-values (new-e new-t) (recur e))
+	   (values (UncheckedCast new-e t) t)]
+          [else ((super type-check-exp env) e)])))
+
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
       (match e
@@ -20,6 +30,7 @@
          (define (rm x s) (set-remove s x))
          (foldl rm (recur body) xs)]
         [(AllocateClosure len ty arity) (set)]
+	[(UncheckedCast e t) (recur e)]
         [else (super free-vars-exp e)]))
     
     ))

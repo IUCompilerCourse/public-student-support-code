@@ -74,6 +74,9 @@
              [else ((super type-check-exp env) e)])]
           [(HasType (Closure arity es) t)
            ((type-check-exp env) (Closure arity es))]
+          [(UncheckedCast e t)
+           (define-values (new-e new-t) (recur e))
+	   (values (UncheckedCast new-e t) t)]
           [(FunRef f n)
            (let ([t (dict-ref env f)])
              (values (FunRef f n) t))]

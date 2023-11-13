@@ -81,6 +81,7 @@ Changelog:
          (struct-out ProgramDefs)
          (struct-out CProgram)
          (struct-out X86Program)
+         (struct-out X86ProgramDefs)
          (contract-out [struct WhileLoop ((cnd exp?) (body exp?))])
          (contract-out [struct SetBang ((var symbol?) (rhs exp?))])
          (contract-out [struct GetBang ((var symbol?))])
@@ -88,6 +89,7 @@ Changelog:
          (contract-out [struct Bool ((value boolean?))])
          (contract-out [struct If ((cnd exp?) (thn exp?) (els exp?))])
          (contract-out [struct HasType ((expr exp?) (type type?))])
+         (contract-out [struct UncheckedCast ((expr exp?) (type type?))])
          (struct-out Void)
          (contract-out [struct StructDef ((name symbol?) (field* param-list?))])
          (contract-out [struct Apply ((fun exp?) (arg* exp-list?))])
@@ -1087,6 +1089,23 @@ Changelog:
                 (csp ast port mode)]
                ))))])
 
+(struct UncheckedCast (expr type) #:transparent #:property prop:custom-print-quotable 'never
+  #:methods gen:custom-write
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'UncheckedCast)
+                 (lambda (obj) (list (UncheckedCast-expr obj) (UncheckedCast-type obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (let ([recur (make-recur port mode)])
+                  (match ast
+                    [(UncheckedCast expr type)
+                     (recur expr port)
+                     ]))]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
+
 (struct GlobalValue (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define write-proc
@@ -1540,6 +1559,7 @@ Changelog:
     [(AllocateClosure n t a) #t]
     [(If cnd thn els) #t]
     [(HasType e t) #t]
+    [(UncheckedCast e t) #t]
     [(Cast e src tgt) #t]
     [(Collect s) #t] ;; update figure in book? see expose-alloc-exp in vectors.rkt
     [(FunRef f n) #t]
@@ -1563,6 +1583,7 @@ Changelog:
     [(Bool b) #t]
     [(Void) #t]
     [(HasType e t) (atm? e)]
+    [(UncheckedCast e t) (atm? e)]
     [else #f]))
 
 (define (atm-list? es)
@@ -1700,6 +1721,8 @@ Changelog:
      (Begin (for/list ([e es]) (parse-exp e)) (parse-exp e))]
     [`(has-type ,e ,t)
      (HasType (parse-exp e) t)]
+    [`(unchecked-cast ,e ,t)
+     (UncheckedCast (parse-exp e) t)]
     [`(,op ,es ...)
      #:when (set-member? src-primitives op)
      (Prim op (for/list ([e es]) (parse-exp e)))]
