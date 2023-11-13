@@ -50,7 +50,7 @@
            (define new-env (append (map cons xs ps) global-env))
            (define env^ (make-hash new-env))
            (define-values (env t)
-             (type-check-blocks info blocks env^ (symbol-append f 'start)))
+             (type-check-blocks info blocks env^ (symbol-append f '_start)))
            (unless (type-equal? t rt)
              (error 'type-check "mismatch in return type, ~a != ~a" t rt))
            (define locals-types

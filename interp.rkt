@@ -1157,7 +1157,7 @@
            (match f-val
              [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
-              (define f-start (symbol-append f 'start))
+              (define f-start (symbol-append f '_start))
               (define new-env (append (map cons xs arg-vals) def-env))
               (parameterize ([get-basic-blocks blocks])
                 ((interp-C-tail new-env) (dict-ref blocks f-start)))]
@@ -1178,7 +1178,7 @@
            (match f-val
              [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
-              (define f-start (symbol-append f 'start))
+              (define f-start (symbol-append f '_start))
               (define new-env (append (map cons xs arg-vals) def-env))
               (parameterize ([get-basic-blocks blocks])
                 ((interp-C-tail new-env) (dict-ref blocks f-start)))]
@@ -1260,7 +1260,7 @@
          (define result-env
            (parameterize ([get-basic-blocks blocks])
              ((interp-x86-block new-env)
-              (dict-ref blocks (symbol-append f 'start)))))
+              (dict-ref blocks (symbol-append f '_start)))))
          (set! root-stack-pointer (- root-stack-pointer root-size))
          (define res (lookup 'rax result-env))
          ;; return and continue after the function call, back in env
@@ -1343,7 +1343,7 @@
       (lambda (ast)
         (copious "R4/interp-pseudo-x86" ast)
 	(match ast
-          [(ProgramDefs info ds)
+          [(X86ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))
@@ -1362,7 +1362,7 @@
       (lambda (ast)
         (verbose "R4/interp-x86" ast)
 	(match ast
-          [(ProgramDefs info ds)
+          [(X86ProgramDefs info ds)
            ((initialize!) runtime-config:rootstack-size
                           runtime-config:heap-size)
            (set! root-stack-pointer (unbox rootstack_begin))

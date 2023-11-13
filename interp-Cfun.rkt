@@ -31,7 +31,7 @@
       (match fun
         [(CFunction xs info blocks def-env)
          (define f (dict-ref info 'name))
-         (define f-start (symbol-append f 'start))
+         (define f-start (symbol-append f '_start))
          (define params-args (for/list ([x xs] [arg arg-vals])
                                (cons x (box arg))))
          (define new-env (append params-args def-env))
