@@ -69,8 +69,9 @@
           [(Closure arity es)
            (define-values (e* t*) (for/lists (e* t*) ([e es])
 					     (recur e)))
-	   
            (let ([ct (closure-type (car t*))])
+	     ;; The following is an abuse of HasType to transport
+	     ;; information to the expose-allocation pass. -Jeremy
              (values (HasType (Closure arity e*) `(Vector ,@t*)) ct))]
           [(Prim 'procedure-arity (list e1))
            (define-values (e1^ t) (recur e1))
