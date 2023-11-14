@@ -48,6 +48,12 @@
     (inherit check-type-equal?)
     (inherit-field max-parameters)
     
+    (define/public (closure-type fun-ty)
+      (match fun-ty
+	[`(,clos ,ps ... -> ,rt)
+	 `(Vector ((Vector _) ,@ps -> ,rt))]
+	[else (error "closure-type, expected function type")]))
+    
     (define/override (type-check-exp env)
       (lambda (e)
         (debug 'type-check-exp "Llambda" e)
@@ -62,9 +68,10 @@
            (values var t)]
           [(Closure arity es)
            (define-values (e* t*) (for/lists (e* t*) ([e es])
-                                    (recur e)))
-           (let ([t `(Vector ,@t*)])
-             (values (HasType (Closure arity e*) t) t))]
+					     (recur e)))
+	   
+           (let ([ct (closure-type (car t*))])
+             (values (HasType (Closure arity e*) `(Vector ,@t*)) ct))]
           [(Prim 'procedure-arity (list e1))
            (define-values (e1^ t) (recur e1))
            (match t
