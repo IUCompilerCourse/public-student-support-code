@@ -28,7 +28,7 @@
         [(Lambda (list `[,xs : ,Ts] ...) rT body)
          (Function xs body env)]
         [(UncheckedCast e t)
-         ((super interp-exp env) e)]
+         (recur e)]
         [else ((super interp-exp env) e)]))
     ))
 
