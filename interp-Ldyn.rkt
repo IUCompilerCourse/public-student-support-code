@@ -68,8 +68,8 @@
   (define recur (interp-Ldyn-exp env))
   (define result
     (match ast
-      [(Var x) (unbox (dict-ref env x))]
-      [(FunRef f n) (lookup f env)]
+      [(Var x) (unbox (lookup x env))]
+      [(FunRef f n) (unbox (lookup f env))]
       [(Int n) (Tagged n 'Integer)]
       [(Bool b) (Tagged b 'Boolean)]
       [(Lambda xs rt body)
@@ -90,7 +90,7 @@
        (vector-set! (Tagged-value vec) (Tagged-value i) arg)
        (Tagged (void) 'Void)]
       [(Let x e body)
-       ((interp-Ldyn-exp (dict-set env x (box (recur e)))) body)]
+       ((interp-Ldyn-exp (cons (cons x (box (recur e))) env)) body)]
       [(Prim 'and (list e1 e2)) (recur (If e1 e2 (Bool #f)))]
       [(Prim 'or (list e1 e2))
        (define v1 (recur e1))
@@ -113,9 +113,9 @@
         (apply (interp-op op) (for/list ([a args]) (Tagged-value a))))]
       [(If q t f)
        (match (Tagged-value (recur q)) [#f (recur f)] [else (recur t)])]
-      [(GetBang x) (unbox (dict-ref env x))]
+      [(GetBang x) (unbox (lookup x env))]
       [(SetBang x rhs)
-       (set-box! (dict-ref env x) (recur rhs))]
+       (set-box! (lookup x env) (recur rhs))]
       [(Begin es body)
        (for ([e es]) (recur e))
        (recur body)]
@@ -154,7 +154,7 @@
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
                       [(Function xs body '())
-                       (Tagged (Function xs body top-level) 'Procedure)])))
+                       (box (Tagged (Function xs body top-level) 'Procedure))])))
      (define result ((interp-Ldyn-exp top-level) body))
      (check-tag result 'Integer ast)
      (Tagged-value result)]
@@ -168,7 +168,7 @@
      (for/list ([b top-level])
        (set-mcdr! b (match (mcdr b)
                       [(Function xs body '())
-                       (Tagged (Function xs body top-level) 'Procedure)])))
+                       (box (Tagged (Function xs body top-level) 'Procedure))])))
      (define result ((interp-Ldyn-exp top-level) (Apply (Var 'main) '())))
      (check-tag result 'Integer ast)
      (Tagged-value result)]))
