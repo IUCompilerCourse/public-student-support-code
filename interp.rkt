@@ -9,6 +9,7 @@
          interp-pseudo-x86-4 interp-x86-4
          interp-pseudo-x86-5 interp-x86-5
          interp-R6-class-alt
+         interp-pseudo-x86-python interp-x86-python
          )
 
 ;; The interpreters in this file are for the intermediate languages
@@ -501,7 +502,7 @@
         (copious "R2/interp-x86-exp" (observe-value result))
         result))
 
-    (define (eflags-status env cc)
+    (define/public (eflags-status env cc)
       (define eflags ((interp-x86-exp env) (Reg '__flag)))
       (match cc
 	 ['e (if (equal? eflags 'equal) 1 0)]
@@ -1816,3 +1817,70 @@
           )))
     
     ))
+
+(define min-int64 (- (arithmetic-shift 1 63)))
+(define max-int64 (sub1 (arithmetic-shift 1 63)))
+(define mask-64 (sub1 (arithmetic-shift 1 64)))
+(define offset-64 (arithmetic-shift 1 63))
+(define (to-signed x)
+  (- (bitwise-and (+ x offset-64) mask-64) offset-64))
+(define (+i64 x y)
+  (to-signed (+ x y)))
+(define (-i64 x y)
+  (to-signed (- x y)))
+(define (*i64 x y)
+  (to-signed (* x y)))
+(define (neg-i64 x)
+  (to-signed (- x)))
+
+;; Interpreter interface so that python-generated x86 code can be interpreted
+;; using the racket x86 emulator
+(define (interp-x86-python-mixin base-class)
+  (class base-class
+    (super-new)
+    (inherit-field x86-ops)
+    (set! x86-ops (hash-set* x86-ops
+                             'addq `(2 ,+i64)
+                             'imulq `(2 ,*i64)
+                             'subq `(2 ,(lambda (s d) (-i64 d s)))
+                             'negq `(1 ,neg-i64)))
+
+    (define/override (interp-x86-instr env)
+      (lambda (ast)
+        (when (pair? ast)
+          (copious "interp-x86-python/interp-x86-instr" (car ast)))
+        (match ast
+          [(cons (Callq 'read_int _) ss)
+           (let ([v (min max-int64 (max min-int64 (read)))])
+             (copious "read " v)
+             ((interp-x86-instr (cons (cons 'rax v) env)) ss))]
+          [(cons (Callq 'print_int _) ss)
+           (printf "~a" (lookup 'rdi env))
+           ((interp-x86-instr env) ss)]
+          [else ((super interp-x86-instr env) ast)])))
+    (define/override (eflags-status env cc)
+      (match cc
+        ['ne (if (not (eqv? 1 (eflags-status env 'e))) 1 0)]
+        [else (super eflags-status env cc)]))))
+
+(define choose-base-interp-class
+  (λ (program)
+    (match program
+      [(X86Program info body) interp-R3-class]
+      [(X86ProgramDefs info blocks) interp-gradual-class]
+      [else (error "choose-base-interp no match in for" program)])))
+
+(define interp-pseudo-x86-python
+  (lambda (p)
+    ((send (new (interp-x86-python-mixin (choose-base-interp-class p)))
+           interp-pseudo-x86 '()) p)))
+
+;; The interp-x86-python interpreter takes a program of the form
+;; (X86Program info blocks)
+;; Also, the info field must be an association list
+;; with a key 'num-root-spills whose values is
+;; the number of spills to the root stack.
+(define interp-x86-python
+  (lambda (p)
+    ((send (new (interp-x86-python-mixin (choose-base-interp-class p)))
+           interp-x86 '()) p)))
