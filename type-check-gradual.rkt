@@ -160,7 +160,8 @@
               (values (Prim 'vector-length (list e1^)) 'Integer)]
              ['Any (values (Prim 'vector-length (list e1^)) 'Integer)]
 	     [`(Vectorof ,elt-type)
-	      (error 'type-check "unhandled Vectorof in vector-length")]
+	      ;;(error 'type-check "unhandled Vectorof in vector-length")
+	      (values (Prim 'vector-length (list e1^)) 'Integer)]
 	     )]
 	  [(Prim 'vector-ref (list e1 e2))
            (define-values (e1^ t1) (recur e1))

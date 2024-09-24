@@ -2406,8 +2406,8 @@ Changelog:
 (define registers-for-alloc (void))
 
 ;; registers-for-alloc should always inlcude the arg-registers.
-(define (use-minimal-set-of-registers! f)
-  (if f
+(define (use-minimal-set-of-registers! flag)
+  (if flag
       (begin
         ;; need at least 2 arg-registers, see limit-functions -Jeremy
         (set! arg-registers (vector 'rdi 'rsi))
