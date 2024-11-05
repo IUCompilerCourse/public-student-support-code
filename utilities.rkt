@@ -2294,10 +2294,11 @@ Changelog:
               (test-case "typecheck" (check-false typechecks "Expected expression to fail typechecking"))
 	      (if (not typechecks) (fail "Expected expression to typecheck")
 		  (test-case "code generation"
-		     (let ([gcc-cmd (if (and (equal? (system-type 'os) 'macosx)
-					     (equal? (system-type 'arch) 'aarch64))
-					"gcc -g -std=c99 -arch x86_64"
-					"gcc -g -std=c99")])
+		     (let ([gcc-cmd (if (equal? (system-type 'os) 'macosx)
+                                        (if (equal? (system-type 'arch) 'aarch64)
+                                            "gcc -g -std=c99 -arch x86_64"
+                                            "gcc -g -std=c99")
+                                        "gcc -g -std=c99 -z noexecstack")])
 		       (let ([gcc-output (system (format "~a runtime.o ./tests/~a.s -o ./tests/~a.out" gcc-cmd test-name test-name))])
 			 (if (not gcc-output) (fail "Failed during assembly")
 			     (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
