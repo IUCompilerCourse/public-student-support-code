@@ -24,6 +24,8 @@
       (debug 'type-equal? "lenient" t1 t2)
       (match* (t1 t2)
         [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
+         ;; We can't require equal lengths because lambda closures
+         ;; need vector subtyping. -Jeremy
          ;; We need to change the uses of type-equal? into subtyping
          ;; because the check for Vector types is not symmetric. -Jeremy
          (and (>= (length ts1) (length ts2))
