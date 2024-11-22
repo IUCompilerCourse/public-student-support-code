@@ -24,7 +24,9 @@
       (debug 'type-equal? "lenient" t1 t2)
       (match* (t1 t2)
         [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
-         (and (eqv? (length ts1) (length ts2))
+         ;; We need to change the uses of type-equal? into subtyping
+         ;; because the check for Vector types is not symmetric. -Jeremy
+         (and (>= (length ts1) (length ts2))
               (for/and ([t1 ts1] [t2 ts2])
                 (type-equal? t1 t2)))]
         [(other wise) (super type-equal? t1 t2)]))
