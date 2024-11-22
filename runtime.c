@@ -33,7 +33,9 @@ static const int TAG_VEC_PTR_BITFIELD_RSHIFT = 7;
 
 static const int TAG_VECOF_LENGTH_RSHIFT = 2;
 static const int TAG_VECOF_PTR_BITFIELD_RSHIFT = 1;
-static const int TAG_VECOF_RSHIFT = 63;
+static const int TAG_VECOF_RSHIFT = 62;
+
+static const int TAG_ISPROXY_RSHIFT = 63;
 
 // cheney implements cheney's copying collection algorithm
 // There is a stub and explaination below.
@@ -46,7 +48,7 @@ static inline int is_forwarding(int64_t tag) {
 }
 
 static inline int is_vecof(int64_t tag) {
-  return (tag >> TAG_VECOF_RSHIFT);
+  return 1 & (tag >> TAG_VECOF_RSHIFT);
 }
 
 // Get the length field out of a vector's tag.
@@ -62,15 +64,15 @@ static inline int64_t get_vec_ptr_bitfield(int64_t tag){
 
 // Get the length field out of a vectorof's tag.
 static inline int get_vecof_length(int64_t tag){
-  return ((tag << 1) >> 1) >> TAG_VECOF_LENGTH_RSHIFT;
+  return ((tag << 2) >> 2) >> TAG_VECOF_LENGTH_RSHIFT;
 }
 
 // Get the "is pointer bitfield" out of a vectorof's tag.
 static inline int64_t get_vecof_ptr_bitfield(int64_t tag){
-  return (tag >> TAG_VECOF_PTR_BITFIELD_RSHIFT) & 1;
+  return 1 & (tag >> TAG_VECOF_PTR_BITFIELD_RSHIFT);
 }
 
-static inline int get_vec_length(int64_t tag){
+int get_vec_length(int64_t tag){
   if (is_vecof(tag))
     return get_vecof_length(tag);
   else
@@ -177,7 +179,7 @@ void validate_vector(int64_t** scan_addr) {
 void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
 {
 #if 0
-  printf("collecting, need %ld\n", bytes_requested);
+  printf("collecting, need %" PRIu64 "\n", bytes_requested);
   print_heap(rootstack_ptr);
 #endif
 
@@ -243,7 +245,7 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     free(tospace_begin);
 
     if (!(tospace_begin = malloc(new_bytes))) {
-      printf("failed to malloc %ld byte fromspace", new_bytes);
+      printf("failed to malloc %lu byte fromspace", new_bytes);
       exit(EXIT_FAILURE);
     }
 
@@ -261,7 +263,7 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     free(tospace_begin);
 
     if (!(tospace_begin = malloc(new_bytes))) {
-      printf("failed to malloc %ld byte tospace", new_bytes);
+      printf("failed to malloc %lu byte tospace", new_bytes);
       exit(EXIT_FAILURE);
     }
 
@@ -280,12 +282,12 @@ void collect(int64_t** rootstack_ptr, uint64_t bytes_requested)
     }
   }
   // All pointers in fromspace point to fromspace
-  /*printf("validating pointers in fromspace [%lld, %lld)\n",
-    (int64_t)fromspace_begin, (int64_t)fromspace_end);*/
+  /*printf("validating pointers in fromspace [%p, %p)\n",
+    fromspace_begin, fromspace_end);*/
   int64_t* scan_ptr = fromspace_begin;
   while (scan_ptr != free_ptr){
     validate_vector(&scan_ptr);
-#if 0
+#if 0 // this sanity test appears to be broken
     int64_t tag = *scan_ptr;
     unsigned char len = get_vector_length(tag);
     int64_t isPtrBits = get_vec_ptr_bitfield(tag);
@@ -534,7 +536,7 @@ void copy_vector(int64_t** vector_ptr_loc)
     return;
   old_vector_ptr = to_ptr(old_vector_ptr);
 #if 0
-  printf("copy_vector %ll\n", (int64_t)old_vector_ptr);
+  printf("copy_vector %p\n", old_vector_ptr);
 #endif
 
   int64_t tag = old_vector_ptr[0];
@@ -543,7 +545,9 @@ void copy_vector(int64_t** vector_ptr_loc)
   //  would have left a forwarding pointer.
 
   if (is_forwarding(tag)) {
-    //printf("\talready copied to %lld\n", tag);
+#if 0
+    printf("\talready copied to %p\n", (int64_t*) tag);
+#endif
     // Since we left a forwarding pointer, we have already
     // moved this vector. All we need to do is update the pointer
     // that was pointing to the old vector. The
@@ -562,7 +566,7 @@ void copy_vector(int64_t** vector_ptr_loc)
     // The new vector is going to be where the free_ptr currently points.
     int64_t* new_vector_ptr = free_ptr;
 #if 0
-      printf("\tto address: %ld\n", (int64_t)new_vector_ptr);
+      printf("\tto address: %p\n", new_vector_ptr);
 #endif
       
     // The tag we grabbed earlier contains some usefull info for
@@ -678,7 +682,7 @@ void print_heap(int64_t** rootstack_ptr)
     if (is_ptr(*root_loc)) {
       print_vector(to_ptr(*root_loc));
     } else {
-      printf("%lld", (int64_t)*root_loc);
+      printf("%" PRId64, (int64_t)*root_loc);
     }
     printf("\n");
   }
@@ -695,7 +699,7 @@ void print_vector(int64_t* vector_ptr)
     int64_t* scan_ptr = vector_ptr;
     int64_t* next_ptr = vector_ptr + len + 1;
 
-    printf("%lld=#(", (int64_t)vector_ptr);
+    printf("%p=#(", vector_ptr);
     scan_ptr += 1;
     int64_t isPointerBits = get_vec_ptr_bitfield(tag);
     while (scan_ptr != next_ptr) {
@@ -727,7 +731,7 @@ int64_t apply_closure(int64_t* clos, int64_t arg) {
 
 int is_vector_proxy(int64_t* vec) {
   int64_t tag = vec[0];
-  return (1 && (tag >> 57)) == 1;
+  return (1 & (tag >> TAG_ISPROXY_RSHIFT)) == 1;
 }
 
 int64_t proxy_vector_length(int64_t* vec) {
@@ -763,3 +767,61 @@ int64_t proxy_vector_set(int64_t* vec, int i, int64_t arg) {
 }
 
 
+int64_t proxy_vecof_ref(int64_t* vec, int i);
+int64_t proxy_vecof_set(int64_t* vec, int i, int64_t arg);
+int64_t proxy_vecof_length(int64_t* vec);
+
+int64_t proxy_vecof_length(int64_t* vec) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    return proxy_vecof_length((int64_t*) vec2);
+  } else {
+    return get_vecof_length(vec[0]);
+  }
+}
+
+int64_t proxy_vecof_ref(int64_t* vec, int i) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    int64_t val = proxy_vecof_ref((int64_t*) vec2, i);
+    int64_t* rd = (int64_t*) vec[2];
+    return apply_closure(rd, val);
+  } else {
+    return vec[i+1];
+  }
+}
+
+int64_t proxy_vecof_set(int64_t* vec, int i, int64_t arg) {
+  if (is_vector_proxy(vec)) {
+    int64_t vec2 = vec[1];
+    int64_t* wr = (int64_t*) vec[3];
+    int64_t arg2 = apply_closure(wr, arg);
+    return proxy_vecof_set((int64_t*) vec2, i, arg2);
+  } else {
+    vec[i+1] = arg;
+    return 0;
+  }
+}
+
+int64_t proxy_vec_length(int64_t* vec) {
+  if (is_vecof(vec[0]))
+    return proxy_vecof_length(vec);
+  else
+    return proxy_vector_length(vec);
+}
+
+int64_t proxy_vec_ref(int64_t* vec, int i) {
+  if (is_vecof(vec[0]))
+    return proxy_vecof_ref(vec, i);
+  else
+    return proxy_vector_ref(vec, i);
+}
+
+int64_t proxy_vec_set(int64_t* vec, int i, int64_t arg) {
+  if (is_vecof(vec[0]))
+    return proxy_vecof_set(vec, i, arg);
+  else {
+    return proxy_vector_set(vec, i, arg);
+  }
+    
+}
