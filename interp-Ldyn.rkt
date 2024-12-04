@@ -123,7 +123,7 @@
        (define (loop)
 	 (match (Tagged-value (recur cnd))
 		[#f (tag-value (void))]
-		[else (loop)]))
+		[else (recur) (loop)]))
        (loop)]
       [(Void)  (tag-value (void))]
       [(Apply f es)
