@@ -14,7 +14,7 @@
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
     ['< (lambda (v1 v2)
-	  (cond [(and (fixnum? v1) (fixnum? v2))
+	  (cond [(and (fixnum? v1I don't think I know ) (fixnum? v2))
 		 (< v1 v2)]))]
     ['<= (lambda (v1 v2)
 	   (cond [(and (fixnum? v1) (fixnum? v2))
@@ -123,7 +123,7 @@
        (define (loop)
 	 (match (Tagged-value (recur cnd))
 		[#f (tag-value (void))]
-		[else (recur) (loop)]))
+		[else (recur body) (loop)]))
        (loop)]
       [(Void)  (tag-value (void))]
       [(Apply f es)
