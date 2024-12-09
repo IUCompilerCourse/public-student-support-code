@@ -7,6 +7,11 @@
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
+(define (tagged-eq? v1 v2)
+  (match* (v1 v2)
+    [((Tagged v1 t1) (Tagged v2 t2)) (eq? v1 v2)]
+    [(v1 v2) (eq? v1 v2)]))
+
 (define (interp-op op)
   (match op
     ['+ fx+]
@@ -99,7 +104,7 @@
        (match (Tagged-value (recur e1)) [#f (Tagged #t 'Boolean)]
               [else (Tagged #f 'Boolean)])]
       [(Prim 'eq? (list e1 e2))
-       (Tagged (equal? (recur e1) (recur e2)) 'Boolean)]
+       (Tagged (tagged-eq? (recur e1) (recur e2)) 'Boolean)]
       [(Prim op (list e1))
        #:when (set-member? type-predicates op)
        (tag-value ((interp-op op) (Tagged-value (recur e1))))]
