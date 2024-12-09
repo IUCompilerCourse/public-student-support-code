@@ -14,7 +14,7 @@
     ['read read-fixnum]
     ['not (lambda (v) (match v [#t #f] [#f #t]))]
     ['< (lambda (v1 v2)
-	  (cond [(and (fixnum? v1I don't think I know ) (fixnum? v2))
+	  (cond [(and (fixnum? v1) (fixnum? v2))
 		 (< v1 v2)]))]
     ['<= (lambda (v1 v2)
 	   (cond [(and (fixnum? v1) (fixnum? v2))
