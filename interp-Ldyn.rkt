@@ -120,7 +120,8 @@
        (match (Tagged-value (recur q)) [#f (recur f)] [else (recur t)])]
       [(GetBang x) (unbox (lookup x env))]
       [(SetBang x rhs)
-       (set-box! (lookup x env) (recur rhs))]
+       (set-box! (lookup x env) (recur rhs))
+       (tag-value (void))]
       [(Begin es body)
        (for ([e es]) (recur e))
        (recur body)]
