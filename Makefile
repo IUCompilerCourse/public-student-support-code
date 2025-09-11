@@ -8,5 +8,8 @@ runtime.o: runtime.c runtime.h
 test: runtime.o
 	$(RACKET) run-tests.rkt
 
-clean:
+clean: test-clean
 	$(RM) -f *.o *.out *.exe *.s *~
+
+test-clean:
+	$(RM) -f tests/*.o tests/*.out tests/*.exe tests/*.s tests/*~
