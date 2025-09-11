@@ -7,12 +7,12 @@
   (class interp-Lwhile-class
     (super-new)
 
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "poly/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "poly/interp_exp" e)
       (match e
         [(Inst e ty ts) (recur e)]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
     
     (define/override (interp-def d)
       (match d

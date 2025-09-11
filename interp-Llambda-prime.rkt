@@ -21,13 +21,13 @@
            [v (error 'interp-op "Llambda'/expected function, not ~a" v)])]
         [else (super interp-op op)]))
     
-    (define/override ((interp-exp env) e)
-      (verbose "Llambda'/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (verbose "Llambda'/interp_exp" e)
       (match e
         [(Closure arity args)
-         (define arg-vals (map (interp-exp env) args))
+         (define arg-vals (map (interp_exp env) args))
          (apply vector (append arg-vals (list `(arity ,arity))))]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
     ))
 
 (define interp-Llambda-prime-class

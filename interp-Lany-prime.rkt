@@ -22,15 +22,15 @@
            [v  (error 'interp-op "expected tagged value, not ~a" v)])]
         [else (super interp-op op)]))
 
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "Lany-prime/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Lany-prime/interp_exp" e)
       (match e
         [(ValueOf e ty)
          (match (recur e)
            [(Tagged v^ tg)  v^]
            [v (error 'interp-op "expected tagged value, not ~a" v)])]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
   ))
 
 (define interp-Lany-prime-class

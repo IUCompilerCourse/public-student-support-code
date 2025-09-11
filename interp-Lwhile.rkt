@@ -12,14 +12,14 @@
   (class interp-Lif-class
     (super-new)
 
-    (define/override ((interp-exp env) e)
-      (verbose "Lwhile/interp-exp" e)
-      (define recur (interp-exp env))
+    (define/override ((interp_exp env) e)
+      (verbose "Lwhile/interp_exp" e)
+      (define recur (interp_exp env))
       (define result
       (match e
         [(Let x e body)
          (define new-env (dict-set env x (box (recur e))))
-         ((interp-exp new-env) body)]
+         ((interp_exp new-env) body)]
         [(Var x) (unbox (dict-ref env x))]
         [(GetBang x) (unbox (dict-ref env x))]
         [(SetBang x rhs)
@@ -33,8 +33,8 @@
          (for ([e es]) (recur e))
          (recur body)]
         [(Void)  (void)]
-        [else ((super interp-exp env) e)]))
-      (verbose "Lwhile/interp-exp" e result)
+        [else ((super interp_exp env) e)]))
+      (verbose "Lwhile/interp_exp" e result)
       result)
     ))
 

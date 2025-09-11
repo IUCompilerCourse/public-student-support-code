@@ -8,7 +8,7 @@
 (define interp-Lany-proxy-class
   (class interp-Lany-prime-class
     (super-new)
-    (inherit apply-fun initialize! interp-def interp-exp)
+    (inherit apply-fun initialize! interp-def interp_exp)
 
     (define (guarded-vector-ref vec i)
       (match vec
@@ -91,7 +91,7 @@
            (set-box! f (match (unbox f)
                          [(Function xs body '())
                           (Function xs body top-level)])))
-         ((interp-exp top-level) body)]
+         ((interp_exp top-level) body)]
         [else (super interp-program ast)]))
     
     ))

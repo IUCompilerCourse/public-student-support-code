@@ -21,15 +21,15 @@
            [v (error 'interp-op "Llambda/expected a function, not ~a" v)])]
         [else (super interp-op op)]))
 
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "Llambda/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Llambda/interp_exp" e)
       (match e
         [(Lambda (list `[,xs : ,Ts] ...) rT body)
          (Function xs body env)]
         [(UncheckedCast e t)
          (recur e)]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
     ))
 
 (define (interp-Llambda p)

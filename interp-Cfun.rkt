@@ -18,12 +18,12 @@
       (lambda (s)
         (match s
           [(Call e es)
-           (define f-val ((interp-exp env) e))
-           (define arg-vals (map (interp-exp env) es))
+           (define f-val ((interp_exp env) e))
+           (define arg-vals (map (interp_exp env) es))
            (call-function f-val arg-vals s)
            env]
           #;[(Assign (Var x) e)
-           (dict-set env x (box ((interp-exp env) e)))]
+           (dict-set env x (box ((interp_exp env) e)))]
           [else ((super interp-stmt env) s)]
           )))
     
@@ -36,24 +36,24 @@
                                (cons x (box arg))))
          (define new-env (append params-args def-env))
          ((interp-tail new-env blocks) (dict-ref blocks f-start))]
-        [else (error 'interp-exp "expected C function, not ~a\nin ~v" fun ast)]))
+        [else (error 'interp_exp "expected C function, not ~a\nin ~v" fun ast)]))
     
-    (define/override ((interp-exp env) ast)
+    (define/override ((interp_exp env) ast)
       (define result
         (match ast
           [(Call f args)
-           (define f-val ((interp-exp env) f))
-           (define arg-vals (map (interp-exp env) args))
+           (define f-val ((interp_exp env) f))
+           (define arg-vals (map (interp_exp env) args))
            (call-function f-val arg-vals ast)]
-          [else ((super interp-exp env) ast)]))
-      (verbose 'interp-exp ast result)
+          [else ((super interp_exp env) ast)]))
+      (verbose 'interp_exp ast result)
       result)
 
     (define/override ((interp-tail env blocks) ast)
       (match ast
         [(TailCall f args)
-         (define arg-vals (map (interp-exp env) args))
-         (define f-val ((interp-exp env) f))
+         (define arg-vals (map (interp_exp env) args))
+         (define f-val ((interp_exp env) f))
          (call-function f-val arg-vals ast)]
         [else ((super interp-tail env blocks) ast)]))
 

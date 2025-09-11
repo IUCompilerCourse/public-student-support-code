@@ -11,12 +11,12 @@
 (define (interp-Cvecof-mixin super-class)
   (class super-class
     (super-new)
-    (inherit interp-exp)
+    (inherit interp_exp)
 
     (define/override ((interp-stmt env) s)
       (match s
         #;[(Prim 'vectorof-set! (list e-vec i e-arg))
-         ((interp-exp env) s)
+         ((interp_exp env) s)
          env]
         [else ((super interp-stmt env) s)]))
 

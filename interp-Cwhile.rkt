@@ -8,7 +8,7 @@
 (define (interp-Cwhile-mixin super-class)
   (class super-class
     (super-new)
-    (inherit interp-exp); call-function
+    (inherit interp_exp); call-function
 
     #;(define/override (apply-closure fun-val arg-vals e)
       (let ([f (vector-ref fun-val 0)])
@@ -17,10 +17,10 @@
     (define/override ((interp-stmt env) s)
       (match s
         [(Prim op es)
-         ((interp-exp env) s)
+         ((interp_exp env) s)
          env]
         [(Assign (Var x) e)
-         (dict-set env x (box ((interp-exp env) e)))]
+         (dict-set env x (box ((interp_exp env) e)))]
         [else ((super interp-stmt env) s)]))
 
     ))

@@ -132,10 +132,10 @@
                (search rest-memory))]
           [other (error 'fetch-page "unmatched ~a" m)])))
 
-    (define/override (interp-exp env)
+    (define/override (interp_exp env)
       (lambda (ast)
-        (define recur (interp-exp env))
-	(verbose "interp-exp" ast)
+        (define recur (interp_exp env))
+	(verbose "interp_exp" ast)
 	(match ast
 	  [(GlobalValue 'free_ptr)
 	   (unbox free_ptr)]
@@ -149,9 +149,9 @@
           [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           [(Collect size)
            (unless (exact-nonnegative-integer? size)
-             (error 'interp-exp "invalid argument to collect in ~a" ast))
+             (error 'interp_exp "invalid argument to collect in ~a" ast))
            (void)]
-	  [else ((super interp-exp env) ast)]
+	  [else ((super interp_exp env) ast)]
 	  )))
 
     (define/override (interp-program ast)
@@ -160,7 +160,7 @@
         [(Program info e)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
-         ((interp-exp '()) e)]
+         ((interp_exp '()) e)]
         ))
     ))
 

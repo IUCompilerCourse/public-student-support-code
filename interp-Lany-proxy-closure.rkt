@@ -68,13 +68,13 @@
                                         (guarded-vector-length v^)]))]
         [else (super interp-op op)]))
 
-    (define/override (interp-exp env)
+    (define/override (interp_exp env)
       (lambda (ast)
 	(match ast
           [(AllocateProxy ty)
            (define len 3)
            (build-vector len (lambda a uninitialized))]
-	  [else ((super interp-exp env) ast)]
+	  [else ((super interp_exp env) ast)]
           )))
     
     ))

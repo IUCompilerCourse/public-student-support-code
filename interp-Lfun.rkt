@@ -18,19 +18,19 @@
          (define params-args (for/list ([x xs] [arg arg-vals])
                                (cons x (box arg))))
          (define new-env (append params-args fun-env))
-         ((interp-exp new-env) body)]
-        [else (error 'interp-exp "expected function, not ~a\nin ~v"
+         ((interp_exp new-env) body)]
+        [else (error 'interp_exp "expected function, not ~a\nin ~v"
                      fun-val e)]))
     
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "Lfun/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Lfun/interp_exp" e)
       (match e
         [(Apply fun args)
          (define fun-val (recur fun))
          (define arg-vals (for/list ([e args]) (recur e)))
          (apply-fun fun-val arg-vals e)]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
 
     (define/public (interp-def d)
       (match d
@@ -47,7 +47,7 @@
              (set-box! f (match (unbox f)
                            [(Function xs body '())
                             (Function xs body top-level)])))
-           ((interp-exp top-level) body))]
+           ((interp_exp top-level) body))]
         
         ;; For after the shrink pass.
         [(ProgramDefs info ds)
@@ -57,7 +57,7 @@
                          [(Function xs body '())
                           (Function xs body top-level)])))
          ;; call the main function
-         ((interp-exp top-level) (Apply (Var 'main) '()))]
+         ((interp_exp top-level) (Apply (Var 'main) '()))]
         ))
     ))
 

@@ -93,16 +93,16 @@
                    '())]
         ))
     
-    (define/override ((interp-exp env) e)
-      (define (recur e) ((interp-exp env) e))
-      (verbose "Lcast/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define (recur e) ((interp_exp env) e))
+      (verbose "Lcast/interp_exp" e)
       (define result
         (match e
           [(Value v) v]
           [(Cast e src tgt)
            (apply-cast (recur e) src tgt)]
-          [else ((super interp-exp env) e)]))
-      (verbose "Lcast/interp-exp" e result)
+          [else ((super interp_exp env) e)]))
+      (verbose "Lcast/interp_exp" e result)
       result)
     
     ))

@@ -11,12 +11,12 @@
     (super-new)
     (inherit initialize! interp-def)
 
-    (define/override ((interp-exp env) e)
-      (verbose "Lfun'/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (verbose "Lfun'/interp_exp" e)
       (match e
         [(FunRef f n)
          (unbox (lookup f env))]
-        [else ((super interp-exp env) e)]
+        [else ((super interp_exp env) e)]
         ))
 
     (define/override (interp-program ast)
@@ -30,7 +30,7 @@
            (set-box! f (match (unbox f)
                          [(Function xs body '())
                           (Function xs body top-level)])))
-         ((interp-exp top-level) (Apply (Var 'main) '()))]))
+         ((interp_exp top-level) (Apply (Var 'main) '()))]))
         
     ))
 

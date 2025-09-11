@@ -67,13 +67,13 @@
            [else (error 'apply-project "tag mismatch ~a != ~a" tag1 tag2)])]
         [else (error 'apply-project "expected tagged value, not ~a" v)]))
     
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "Lany/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Lany/interp_exp" e)
       (match e
         [(Inject e ty) (apply-inject (recur e) (any-tag ty))]
         [(Project e ty2)  (apply-project (recur e) ty2)]
-        [else ((super interp-exp env) e)]))
+        [else ((super interp_exp env) e)]))
     ))
 
 (define (interp-Lany p)

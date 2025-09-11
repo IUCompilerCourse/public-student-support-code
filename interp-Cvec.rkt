@@ -10,18 +10,18 @@
 (define (interp-Cvec-mixin super-class)
   (class super-class
     (super-new)
-    (inherit interp-exp initialize!)
+    (inherit interp_exp initialize!)
 
     (define/override (interp-stmt env)
       (lambda (ast)
         (copious "interp-stmt" ast)
         (match ast
           #;[(Prim 'vector-set! (list e-vec i e-arg))
-           ((interp-exp env) ast)
+           ((interp_exp env) ast)
            env]
           ;; TODO: move the following to the interpreter for any
           #;[(Prim 'any-vector-set! (list e-vec i e-arg))
-           ((interp-exp env) ast)
+           ((interp_exp env) ast)
            env]
 	  ;; Determine if a collection is needed.
 	  ;; Which it isn't because vectors stored in the environment

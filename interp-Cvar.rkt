@@ -8,13 +8,13 @@
 (define (interp-Cvar-mixin super-class)
   (class super-class
     (super-new)
-    (inherit interp-exp)
+    (inherit interp_exp)
 
     (define/public (interp-stmt env)
       (lambda (s)
         (match s
           [(Assign (Var x) e)
-           (dict-set env x ((interp-exp env) e))]
+           (dict-set env x ((interp_exp env) e))]
           [else
            (error 'interp-stmt "unmatched ~a" s)]
           )))
@@ -23,7 +23,7 @@
       (lambda (t)
         (match t
           [(Return e)
-           ((interp-exp env) e)]
+           ((interp_exp env) e)]
           [(Seq s t2)
            (define new-env ((interp-stmt env) s))
            ((interp-tail new-env) t2)]

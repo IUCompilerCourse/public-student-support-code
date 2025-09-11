@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp-Lint interp-Lint-class)
+(provide interp_Lint interp-Lint-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interpreter for Lint: integer arithmetic
@@ -12,29 +12,29 @@
 ;;   the match 'app' feature because the book doesn't introduce
 ;;   that until a later.
 
-(define (interp-exp e)
+(define (interp_exp e)
     (match e
       [(Int n) n]
       [(Prim 'read '())
        (define r (read))
        (cond [(fixnum? r) r]
-             [else (error 'interp-exp "expected an integer" r)])]
+             [else (error 'interp_exp "expected an integer" r)])]
       [(Prim '- (list e))
-       (define v (interp-exp e))
+       (define v (interp_exp e))
        (fx- 0 v)]
       [(Prim '+ (list e1 e2))
-       (define v1 (interp-exp e1))
-       (define v2 (interp-exp e2))
+       (define v1 (interp_exp e1))
+       (define v2 (interp_exp e2))
        (fx+ v1 v2)]
       [(Prim '- (list e1 e2))
-       (define v1 (interp-exp e1))
-       (define v2 (interp-exp e2))
+       (define v1 (interp_exp e1))
+       (define v2 (interp_exp e2))
        (fx- v1 v2)]
       ))
 
-(define (interp-Lint p)
+(define (interp_Lint p)
   (match p
-    [(Program '() e) (interp-exp e)]
+    [(Program '() e) (interp_exp e)]
     ))
 
 
@@ -45,29 +45,29 @@
   (class object%
     (super-new)
     
-    (define/public ((interp-exp env) e)
+    (define/public ((interp_exp env) e)
       (match e
         [(Int n) n]
         [(Prim 'read '())
          (define r (read))
          (cond [(fixnum? r) r]
-               [else (error 'interp-exp "expected an integer" r)])]
+               [else (error 'interp_exp "expected an integer" r)])]
         [(Prim '- (list e))
-         (define v ((interp-exp env) e))
+         (define v ((interp_exp env) e))
          (fx- 0 v)]
         [(Prim '+ (list e1 e2))
-         (define v1 ((interp-exp env) e1))
-         (define v2 ((interp-exp env) e2))
+         (define v1 ((interp_exp env) e1))
+         (define v2 ((interp_exp env) e2))
          (fx+ v1 v2)]
         [(Prim '- (list e1 e2))
-         (define v1 ((interp-exp env) e1))
-         (define v2 ((interp-exp env) e2))
+         (define v1 ((interp_exp env) e1))
+         (define v2 ((interp_exp env) e2))
          (fx- v1 v2)]
         ))
 
     (define/public (interp-program p)
       (match p
-        [(Program '() e) ((interp-exp '()) e)]
+        [(Program '() e) ((interp_exp '()) e)]
         ))
     ))
 

@@ -9,14 +9,14 @@
     (super-new)
     (inherit-field uninitialized)
 
-    (define/override (interp-exp env)
+    (define/override (interp_exp env)
       (lambda (ast)
-        (define recur (interp-exp env))
-	(verbose "interp-exp" ast)
+        (define recur (interp_exp env))
+	(verbose "interp_exp" ast)
 	(match ast
           [(AllocateArray e-len elt-ty)
            (build-vector (recur e-len) (lambda a uninitialized))]
-	  [else ((super interp-exp env) ast)]
+	  [else ((super interp_exp env) ast)]
 	  )))
 
     ))

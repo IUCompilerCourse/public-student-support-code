@@ -25,7 +25,7 @@
         all-tests)))
 
 ;; The following tests the intermediate-language outputs of the passes.
-(interp-tests "var" #f compiler-passes interp-Lvar "var_test" (tests-for "var"))
+(interp-tests "var" #f compiler-passes interp_Lvar "var_test" (tests-for "var"))
 
 ;; The following tests the final x86 code.
 (compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))

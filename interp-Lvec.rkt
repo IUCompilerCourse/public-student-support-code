@@ -28,12 +28,12 @@
         [else (super interp-op op)]
         ))
 
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
-      (verbose "Lvec/interp-exp" e)
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Lvec/interp_exp" e)
       (match e
         [(HasType e t)  (recur e)]
-        [else ((super interp-exp env) e)]
+        [else ((super interp_exp env) e)]
         ))
     ))
 

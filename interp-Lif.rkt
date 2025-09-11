@@ -39,8 +39,8 @@
         [else (error 'interp-op "unknown operator ~a" op)]
         ))
 
-    (define/override ((interp-exp env) e)
-      (define recur (interp-exp env))
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
       (match e
         [(Bool b) b]
         [(If cnd thn els)
@@ -60,12 +60,12 @@
            [#f (match (recur e2) [#t #t] [#f #f])])]
         [(Prim op args)
          (apply (interp-op op) (for/list ([e args]) (recur e)))]
-        [else ((super interp-exp env) e)]
+        [else ((super interp_exp env) e)]
         ))
     ))
 
 (define (interp-Lif p)
   (send (new interp-Lif-class) interp-program p))
 
-#;(define (interp-exp env)
-  (send (new interp-Lif-class) interp-exp env))
+#;(define (interp_exp env)
+  (send (new interp-Lif-class) interp_exp env))

@@ -7,13 +7,13 @@
 (define (interp-Cif-mixin super-class)
   (class super-class
     (super-new)
-    (inherit interp-exp)
+    (inherit interp_exp)
 
     (define/override (interp-stmt env)
       (lambda (s)
         (match s
           [(Assign (Var x) e)
-           (cons (cons x ((interp-exp env) e)) env)]
+           (cons (cons x ((interp_exp env) e)) env)]
           [else ((super interp-stmt env) s)]
           )))
 
@@ -22,7 +22,7 @@
         (match t
           ;; Cvar cases, repeated logic but with blocks added
           [(Return e)
-           ((interp-exp env) e)]
+           ((interp_exp env) e)]
           [(Seq s t2)
            (define new-env ((interp-stmt env) s))
            ((interp-tail new-env blocks) t2)]
@@ -30,7 +30,7 @@
           [(Goto l)
            ((interp-tail env blocks) (dict-ref blocks l))]
           [(IfStmt (Prim op arg*) (Goto thn-label) (Goto els-label))
-           (if ((interp-exp env) (Prim op arg*))
+           (if ((interp_exp env) (Prim op arg*))
                ((interp-tail env blocks) (dict-ref blocks thn-label))
                ((interp-tail env blocks) (dict-ref blocks els-label)))]
           )))
