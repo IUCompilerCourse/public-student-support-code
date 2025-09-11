@@ -2516,8 +2516,6 @@ Changelog:
 (define (make-lets bs e)
   (match bs
     [`() e]
-    #;[`((_ . ,e^) . ,bs^)
-       (Seq e^ (make-lets bs^ e))]
     [`((_ . ,e^) . ,bs^)
      (Begin (list e^) (make-lets bs^ e))]
     [`((,x . ,e^) . ,bs^)
