@@ -2273,7 +2273,7 @@ Changelog:
 	    [result (cond [(symbol=? res 'timed-out)
                            `(error timed-out ,timeout)]
                           ;; We're using the exit code as the result of the program.
-                          ;; It does not matter to use whether the exit code is nonzero
+                          ;; It does not matter whether the exit code is nonzero
                           ;; (a traditional error in Unix) or zero (traditional success).
 			  [(symbol=? res 'done-error)
                            `(result done ,(control-fun 'exit-code))]
