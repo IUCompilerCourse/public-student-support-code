@@ -2272,9 +2272,13 @@ Changelog:
 	    [res (wait-or-timeout control-fun timeout)]
 	    [result (cond [(symbol=? res 'timed-out)
                            `(error timed-out ,timeout)]
+                          ;; We're using the exit code as the result of the program.
+                          ;; It does not matter to use whether the exit code is nonzero
+                          ;; (a traditional error in Unix) or zero (traditional success).
 			  [(symbol=? res 'done-error)
-                           `(error done-error ,(control-fun 'exit-code))]
-			  [else `(result done ,(read-line in1))])])
+                           `(result done ,(control-fun 'exit-code))]
+                          [else `(result done ,(control-fun 'exit-code))]
+                          )])
        (close-input-port in1)
        (close-input-port inErr)
        (close-output-port out)
