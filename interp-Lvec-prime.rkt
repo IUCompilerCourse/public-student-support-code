@@ -1,10 +1,10 @@
 #lang racket
-(require "interp-Lvec.rkt")
+(require "interp_Lvec.rkt")
 (require "utilities.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Lvec-prime interp-Lvec-prime-mixin interp-Lvec-prime-class)
+(provide interp_Lvec_prime interp_Lvec_prime-mixin interp_Lvec_prime-class)
 
-(define (interp-Lvec-prime-mixin super-class)
+(define (interp_Lvec_prime-mixin super-class)
   (class super-class
     (super-new)
 
@@ -33,7 +33,7 @@
 	(let-values ([(start stop name vect) (fetch-page addr)])
 	  (let ([value (vector-ref vect (arithmetic-shift (- addr start) -3))])
 	    (when (equal? value uninitialized)
-	      (error 'interp-Lvec-class/memory-read
+	      (error 'interp_Lvec-class/memory-read
 		     "read uninitialized memory at address ~s"
 		     addr))
 	    value))))
@@ -164,7 +164,7 @@
         ))
     ))
 
-(define interp-Lvec-prime-class (interp-Lvec-prime-mixin interp-Lvec-class))
+(define interp_Lvec_prime-class (interp_Lvec_prime-mixin interp_Lvec-class))
     
-(define (interp-Lvec-prime p)
-  (send (new interp-Lvec-prime-class) interp-program p))
+(define (interp_Lvec_prime p)
+  (send (new interp_Lvec_prime-class) interp-program p))

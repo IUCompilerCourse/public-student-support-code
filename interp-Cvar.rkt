@@ -2,10 +2,10 @@
 (require racket/fixnum)
 (require racket/dict)
 (require "utilities.rkt")
-(require "interp-Lvar.rkt")
-(provide interp-Cvar interp-Cvar-mixin)
+(require "interp_Lvar.rkt")
+(provide interp_Cvar interp_Cvar-mixin)
 
-(define (interp-Cvar-mixin super-class)
+(define (interp_Cvar-mixin super-class)
   (class super-class
     (super-new)
     (inherit interp_exp)
@@ -36,5 +36,5 @@
         ))
     ))
     
-(define (interp-Cvar p)
-  (send (new (interp-Cvar-mixin interp-Lvar-class)) interp-program p))
+(define (interp_Cvar p)
+  (send (new (interp_Cvar-mixin interp_Lvar-class)) interp-program p))

@@ -2,8 +2,8 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Lvar.rkt")
-(require "interp-Cvar.rkt")
+(require "interp_Lvar.rkt")
+(require "interp_Cvar.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 ;; (debug-level 1)

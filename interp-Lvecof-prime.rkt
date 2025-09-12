@@ -1,10 +1,10 @@
 #lang racket
-(require "interp-Lvec-prime.rkt")
-(require "interp-Lvecof.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Lvecof.rkt")
 (require "utilities.rkt")
-(provide interp-Lvecof-prime interp-Lvecof-prime-mixin interp-Lvecof-prime-class)
+(provide interp_Lvecof_prime interp_Lvecof_prime-mixin interp_Lvecof_prime-class)
 
-(define (interp-Lvecof-prime-mixin super-class)
+(define (interp_Lvecof_prime-mixin super-class)
   (class super-class
     (super-new)
     (inherit-field uninitialized)
@@ -21,9 +21,9 @@
 
     ))
     
-(define interp-Lvecof-prime-class
-  (interp-Lvecof-prime-mixin  
-   (interp-Lvec-prime-mixin interp-Lvecof-class)))
+(define interp_Lvecof_prime-class
+  (interp_Lvecof_prime-mixin  
+   (interp_Lvec_prime-mixin interp_Lvecof-class)))
     
-(define (interp-Lvecof-prime p)
-  (send (new interp-Lvecof-prime-class) interp-program p))
+(define (interp_Lvecof_prime p)
+  (send (new interp_Lvecof_prime-class) interp-program p))

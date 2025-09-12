@@ -1,16 +1,16 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Lvec.rkt")
-(require "type-check-Lvecof.rkt")
-(require "type-check-Llambda.rkt")
-(provide type-check-Lany type-check-Lany-has-type
-         type-check-Lany-class type-check-any-mixin)
+(require "type_check_Lvec.rkt")
+(require "type_check_Lvecof.rkt")
+(require "type_check_Llambda.rkt")
+(provide type_check_Lany type_check_Lany-has-type
+         type_check_Lany-class type_check_any-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Type Checker for the Any type and inject, project, etc.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (type-check-any-mixin super-class)
+(define (type_check_any-mixin super-class)
   (class super-class
     (super-new)
     (inherit check-type-equal?)
@@ -60,10 +60,10 @@
          #f]
         ))
 
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "any" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "any" e)
+        (define recur (type_check_exp env))
         (match e
           [(Prim 'any-vector-length (list e1))
            (define-values (e1^ t1) (recur e1))
@@ -104,25 +104,25 @@
           [(ValueOf e ty)
            (define-values (new-e e-ty) (recur e))
            (values (ValueOf new-e ty) ty)]
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
     
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lany
+;; type_check_Lany
 
-(define type-check-Lany-class
-  (class (type-check-any-mixin type-check-Llambda-class)
+(define type_check_Lany-class
+  (class (type_check_any-mixin type_check_Llambda-class)
     (super-new)
     (inherit check-type-equal? join-types operator-types flat-ty?)
 
     (define/public (type-predicates)
       (set 'boolean? 'integer? 'vector? 'procedure? 'void?))
 
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "Lany" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "Lany" e)
+        (define recur (type_check_exp env))
         (match e
           ;; Change If to use join-types
           [(If cnd thn els)
@@ -134,13 +134,13 @@
            (values (If cnd^ thn^ els^) (join-types Tt Te))]
           [(Inject e1 ty)
            (unless (flat-ty? ty)
-             (error 'type-check "may only inject from flat type, not ~a" ty))
+             (error 'type_check "may only inject from flat type, not ~a" ty))
            (define-values (new-e1 e-ty) (recur e1))
            (check-type-equal? e-ty ty e)
            (values (Inject new-e1 ty) 'Any)]
           [(Project e1 ty)
            (unless (flat-ty? ty)
-             (error 'type-check "may only project to flat type, not ~a" ty))
+             (error 'type_check "may only project to flat type, not ~a" ty))
            (define-values (new-e1 e-ty) (recur e1))
            (check-type-equal? e-ty 'Any e)
            (values (Project new-e1 ty) ty)]
@@ -158,18 +158,18 @@
              [(`(Vectorof ,t1) `(Vectorof ,t2))         (void)]
              [(other wise) (check-type-equal? t1 t2 e)])
            (values (Prim 'eq? (list e1 e2)) 'Boolean)]
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
 
     ))
 
-(define (type-check-Lany p)
-  (send (new type-check-Lany-class) type-check-program p))
+(define (type_check_Lany p)
+  (send (new type_check_Lany-class) type_check_program p))
 
-(define (type-check-Lany-has-type p)
+(define (type_check_Lany-has-type p)
   (begin
     (typed-vec #t)
     (typed-vecof #t)
-    (define t (send (new type-check-Lany-class) type-check-program p))
+    (define t (send (new type_check_Lany-class) type_check_program p))
     (typed-vec #f)
     (typed-vecof #f)
     t))

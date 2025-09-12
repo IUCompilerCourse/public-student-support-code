@@ -1,16 +1,16 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Llambda-prime.rkt")
-(require "interp-Cvar.rkt")
-(require "interp-Cif.rkt")
-(require "interp-Cwhile.rkt")
-(require "interp-Cvec.rkt")
-(require "interp-Cvecof.rkt")
-(require "interp-Cfun.rkt")
+(require "interp_Llambda_prime.rkt")
+(require "interp_Cvar.rkt")
+(require "interp_Cif.rkt")
+(require "interp_Cwhile.rkt")
+(require "interp_Cvec.rkt")
+(require "interp_Cvecof.rkt")
+(require "interp_Cfun.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Clambda interp-Clambda-mixin)
+(provide interp_Clambda interp_Clambda-mixin)
 
-(define (interp-Clambda-mixin super-class)
+(define (interp_Clambda-mixin super-class)
   (class super-class
     (super-new)
     
@@ -24,14 +24,14 @@
         [else (super interp-op op)]))
     ))
 
-(define Clambda-class (interp-Clambda-mixin
-                       (interp-Cfun-mixin
-                        (interp-Cvecof-mixin
-                         (interp-Cvec-mixin
-                          (interp-Cwhile-mixin
-                           (interp-Cif-mixin
-                            (interp-Cvar-mixin
-                             interp-Llambda-prime-class))))))))
+(define Clambda-class (interp_Clambda-mixin
+                       (interp_Cfun-mixin
+                        (interp_Cvecof-mixin
+                         (interp_Cvec-mixin
+                          (interp_Cwhile-mixin
+                           (interp_Cif-mixin
+                            (interp_Cvar-mixin
+                             interp_Llambda_prime-class))))))))
   
-(define (interp-Clambda p)
+(define (interp_Clambda p)
   (send (new Clambda-class) interp-program p))

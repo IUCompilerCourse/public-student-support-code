@@ -1,19 +1,19 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Lvec.rkt")
-(provide type-check-Lvecof type-check-Lvecof-has-type
-         type-check-Lvecof-class type-check-vecof-mixin typed-vecof)
+(require "type_check_Lvec.rkt")
+(provide type_check_Lvecof type_check_Lvecof-has-type
+         type_check_Lvecof-class type_check_vecof-mixin typed-vecof)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Homogeneous Vectors                                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lvecof
+;; type_check_Lvecof
 
 (define typed-vecof (make-parameter #f))
 
-(define (type-check-vecof-mixin super-class)
+(define (type_check_vecof-mixin super-class)
   (class super-class
     (super-new)
     (inherit check-type-equal?)
@@ -23,10 +23,10 @@
                 (exit . (() . _)))
               (super operator-types)))
 
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "vecof" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "vecof" e)
+        (define recur (type_check_exp env))
         (match e
           [(Prim 'make-vector (list e1 e2))
            (define-values (e1^ t1) (recur e1))
@@ -44,7 +44,7 @@
              [`(Vectorof ,elt-type)
               (values (Prim 'vectorof-ref (list e1^ e2^)) elt-type)]
              [else
-              (error 'type-check
+              (error 'type_check
                      "expected a vectorof in vectorof-ref, not " t1)])]
           [(Prim 'vectorof-set! (list e1 e2 e3) )
            (define-values (e-vec t-vec) (recur e1))
@@ -55,16 +55,16 @@
              [`(Vectorof ,elt-type)
               (check-type-equal? elt-type t-arg e)
               (values (Prim 'vectorof-set! (list e-vec e2^ e-arg^))  'Void)]
-             [else ((super type-check-exp env) e)])]
+             [else ((super type_check_exp env) e)])]
           [(Prim 'vectorof-length (list e1))
            (define-values (e1^ t1) (recur e1))
-	   (debug 'type-check-exp "vectorof-length type: " t1)
+	   (debug 'type_check_exp "vectorof-length type: " t1)
            (match t1
              [`(Vectorof ,t)
               (values (Prim 'vectorof-length (list e1^))  'Integer)]
              [else
 	      ;; error here instead? -Jeremy
-	      ((super type-check-exp env) e)])]
+	      ((super type_check_exp env) e)])]
 
           [(AllocateArray e1 t)
            (define-values (e1^ t1) (recur e1))
@@ -72,16 +72,16 @@
            (values (AllocateArray e1^ t) t)]
 
           [(HasType e t)
-           ((type-check-exp env) e)]
+           ((type_check_exp env) e)]
           
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lvecof
+;; type_check_Lvecof
 
-(define type-check-Lvecof-class
-  (class (type-check-vecof-mixin type-check-Lvec-class)
+(define type_check_Lvecof-class
+  (class (type_check_vecof-mixin type_check_Lvec-class)
     (super-new)
     (inherit check-type-equal?)
 
@@ -90,10 +90,10 @@
                 (exit . (() . _)))
               (super operator-types)))
     
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "vecof" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "vecof" e)
+        (define recur (type_check_exp env))
         (match e
           [(Prim 'vector-ref (list e1 e2))
            (define-values (e1^ t1) (recur e1))
@@ -105,7 +105,7 @@
               (check-type-equal? t2 'Integer e2)
               (values (Prim 'vector-ref (list e1^^ e2^))
                       elt-type)]
-             [else ((super type-check-exp env) e)])]
+             [else ((super type_check_exp env) e)])]
           [(Prim 'vector-set! (list e1 e2 e3) )
            (define-values (e-vec t-vec) (recur e1))
            (match t-vec
@@ -115,24 +115,24 @@
               (check-type-equal? t2 'Integer e2)
               (check-type-equal? elt-type t-arg e)
               (values (Prim 'vectorof-set! (list e-vec e2^ e-arg^))  'Void)]
-             [else ((super type-check-exp env) e)])]
+             [else ((super type_check_exp env) e)])]
           [(Prim 'vector-length (list e1))
            (define-values (e1^ t1) (recur e1))
            (match t1
              [`(Vectorof ,t)
               (values (Prim 'vectorof-length (list e1^))  'Integer)]
-             [else ((super type-check-exp env) e)])]
-          [else ((super type-check-exp env) e)])))
+             [else ((super type_check_exp env) e)])]
+          [else ((super type_check_exp env) e)])))
 
     ))
 
-(define (type-check-Lvecof p)
-  (send (new type-check-Lvecof-class) type-check-program p))
+(define (type_check_Lvecof p)
+  (send (new type_check_Lvecof-class) type_check_program p))
 
-(define (type-check-Lvecof-has-type p)
+(define (type_check_Lvecof-has-type p)
   (typed-vecof #t)
   (typed-vec #t)
-  (define result (send (new type-check-Lvecof-class) type-check-program p))
+  (define result (send (new type_check_Lvecof-class) type_check_program p))
   (typed-vecof #f)
   (typed-vec #f)
   result)

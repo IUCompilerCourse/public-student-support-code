@@ -1,15 +1,15 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lfun-prime.rkt")
-(require "interp-Cvar.rkt")
-(require "interp-Cif.rkt")
-(require "interp-Cwhile.rkt")
-(require "interp-Cvec.rkt")
-(require "interp-Cvecof.rkt")
+(require "interp_Lfun_prime.rkt")
+(require "interp_Cvar.rkt")
+(require "interp_Cif.rkt")
+(require "interp_Cwhile.rkt")
+(require "interp_Cvec.rkt")
+(require "interp_Cvecof.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Cfun interp-Cfun-mixin)
+(provide interp_Cfun interp_Cfun-mixin)
 
-(define (interp-Cfun-mixin super-class)
+(define (interp_Cfun-mixin super-class)
   (class super-class
     (super-new)
     (inherit initialize!)
@@ -80,12 +80,12 @@
     
     ))
 
-(define (interp-Cfun p)
-  (define Cfun-class (interp-Cfun-mixin
-                      (interp-Cvecof-mixin
-                       (interp-Cvec-mixin
-                        (interp-Cwhile-mixin
-                         (interp-Cif-mixin
-                          (interp-Cvar-mixin
-                           interp-Lfun-prime-class)))))))
+(define (interp_Cfun p)
+  (define Cfun-class (interp_Cfun-mixin
+                      (interp_Cvecof-mixin
+                       (interp_Cvec-mixin
+                        (interp_Cwhile-mixin
+                         (interp_Cif-mixin
+                          (interp_Cvar-mixin
+                           interp_Lfun_prime-class)))))))
   (send (new Cfun-class) interp-program p))

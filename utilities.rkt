@@ -2077,7 +2077,7 @@ Changelog:
                  (define pass-name (list-ref pass-info 0))
                  (define pass      (list-ref pass-info 1))
                  (define interp    (list-ref pass-info 2))
-                 (define type-checker
+                 (define type_checker
                    (cond [(>= (length pass-info) 4)
                           (list-ref pass-info 3)]
                          [else #f]))
@@ -2085,11 +2085,11 @@ Changelog:
                  (define input p)
                  (define new-p^ ((check-exception name test-name #f) (thunk (pass p))))
                  (trace "pass output: " (strip-has-type new-p^))
-                 (define new-p (cond [type-checker
+                 (define new-p (cond [type_checker
                                       (trace "type checking...")
-                                      (type-checker new-p^)]
+                                      (type_checker new-p^)]
                                      [else new-p^]))
-                 (trace "type-check output: " (strip-has-type new-p))
+                 (trace "type_check output: " (strip-has-type new-p))
                  (cond [interp
                         (define result
                           (if (file-exists? input-file-name) 
@@ -2147,7 +2147,7 @@ Changelog:
                                 (define name      (list-ref pass-info 0))
                                 (define pass      (list-ref pass-info 1))
                                 (define interp    (list-ref pass-info 2))
-                                (define type-checker
+                                (define type_checker
                                   (cond [(>= (length pass-info) 4)
                                          (list-ref pass-info 3)]
                                         [else #f]))
@@ -2156,9 +2156,9 @@ Changelog:
                                   ((check-exception name file-base #f)
                                    (thunk (pass p))))
                                 (trace (string-append name " output: ") (strip-has-type new-p^))
-                                (define new-p (cond [type-checker
+                                (define new-p (cond [type_checker
                                                      (trace "type checking...")
-                                                     (type-checker new-p^)]
+                                                     (type_checker new-p^)]
                                                     [else new-p^]))
                                 (loop (cdr passes) new-p)
                                 ]))])

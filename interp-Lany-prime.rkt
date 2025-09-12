@@ -1,19 +1,19 @@
 #lang racket
-(require "interp-Lvec-prime.rkt")
-(require "interp-Lvecof-prime.rkt")
-(require "interp-Lfun-prime.rkt")
-(require "interp-Llambda-prime.rkt")
-(require "interp-Lany.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Lvecof_prime.rkt")
+(require "interp_Lfun_prime.rkt")
+(require "interp_Llambda_prime.rkt")
+(require "interp_Lany.rkt")
 (require "utilities.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Lany-prime interp-Lany-prime-class interp-Lany-prime-mixin)
+(provide interp_Lany_prime interp_Lany_prime-class interp_Lany_prime-mixin)
 
-(define (interp-Lany-prime-mixin super-class)
+(define (interp_Lany_prime-mixin super-class)
   (class super-class
     (super-new)
 
     (define/override (interp-op op)
-      (verbose "Lany-prime/interp-op" op)
+      (verbose "Lany_prime/interp-op" op)
       (match op
         ['make-any (lambda (v tg) (Tagged v tg))]
         ['tag-of-any
@@ -24,7 +24,7 @@
 
     (define/override ((interp_exp env) e)
       (define recur (interp_exp env))
-      (verbose "Lany-prime/interp_exp" e)
+      (verbose "Lany_prime/interp_exp" e)
       (match e
         [(ValueOf e ty)
          (match (recur e)
@@ -33,13 +33,13 @@
         [else ((super interp_exp env) e)]))
   ))
 
-(define interp-Lany-prime-class
-  (interp-Lany-prime-mixin
-   (interp-Llambda-prime-mixin
-    (interp-Lfun-prime-mixin
-     (interp-Lvecof-prime-mixin
-      (interp-Lvec-prime-mixin
-       interp-Lany-class))))))
+(define interp_Lany_prime-class
+  (interp_Lany_prime-mixin
+   (interp_Llambda_prime-mixin
+    (interp_Lfun_prime-mixin
+     (interp_Lvecof_prime-mixin
+      (interp_Lvec_prime-mixin
+       interp_Lany-class))))))
     
-(define (interp-Lany-prime p)
-  (send (new interp-Lany-prime-class) interp-program p))
+(define (interp_Lany_prime p)
+  (send (new interp_Lany_prime-class) interp-program p))

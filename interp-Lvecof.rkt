@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lvec.rkt")
-(provide interp-Lvecof interp-Lvecof-class)
+(require "interp_Lvec.rkt")
+(provide interp_Lvecof interp_Lvecof-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lvecof-class
-  (class interp-Lvec-class
+(define interp_Lvecof-class
+  (class interp_Lvec-class
     (super-new)
 
     (define/override (interp-op op)
@@ -32,5 +32,5 @@
         [else (super interp-op op)]))
     ))
 
-(define (interp-Lvecof p)
-  (send (new interp-Lvecof-class) interp-program p))
+(define (interp_Lvecof p)
+  (send (new interp_Lvecof-class) interp-program p))

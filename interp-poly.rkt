@@ -1,10 +1,10 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lwhile.rkt")
-(provide interp-poly interp-poly-class)
+(require "interp_Lwhile.rkt")
+(provide interp_poly interp_poly-class)
 
-(define interp-poly-class
-  (class interp-Lwhile-class
+(define interp_poly-class
+  (class interp_Lwhile-class
     (super-new)
 
     (define/override ((interp_exp env) e)
@@ -22,5 +22,5 @@
     
     ))
 
-(define (interp-poly p)
-  (send (new interp-poly-class) interp-program p))
+(define (interp_poly p)
+  (send (new interp_poly-class) interp-program p))

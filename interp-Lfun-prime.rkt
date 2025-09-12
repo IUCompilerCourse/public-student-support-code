@@ -1,12 +1,12 @@
 #lang racket
-(require "interp-Lvecof-prime.rkt")
-(require "interp-Lvec-prime.rkt")
-(require "interp-Lfun.rkt")
+(require "interp_Lvecof_prime.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Lfun.rkt")
 (require "utilities.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Lfun-prime interp-Lfun-prime-mixin interp-Lfun-prime-class)
+(provide interp_Lfun_prime interp_Lfun_prime-mixin interp_Lfun_prime-class)
 
-(define (interp-Lfun-prime-mixin super-class)
+(define (interp_Lfun_prime-mixin super-class)
   (class super-class
     (super-new)
     (inherit initialize! interp-def)
@@ -34,11 +34,11 @@
         
     ))
 
-(define interp-Lfun-prime-class
-  (interp-Lfun-prime-mixin
-   (interp-Lvecof-prime-mixin
-    (interp-Lvec-prime-mixin
-     interp-Lfun-class))))
+(define interp_Lfun_prime-class
+  (interp_Lfun_prime-mixin
+   (interp_Lvecof_prime-mixin
+    (interp_Lvec_prime-mixin
+     interp_Lfun-class))))
     
-(define (interp-Lfun-prime p)
-  (send (new interp-Lfun-prime-class) interp-program p))
+(define (interp_Lfun_prime p)
+  (send (new interp_Lfun_prime-class) interp-program p))

@@ -1,13 +1,13 @@
 #lang racket
-(require "interp-Lvec-prime.rkt")
-(require "interp-Lvecof-prime.rkt")
-(require "interp-Lfun-prime.rkt")
-(require "interp-Llambda.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Lvecof_prime.rkt")
+(require "interp_Lfun_prime.rkt")
+(require "interp_Llambda.rkt")
 (require "utilities.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Llambda-prime interp-Llambda-prime-mixin interp-Llambda-prime-class)
+(provide interp_Llambda_prime interp_Llambda_prime-mixin interp_Llambda_prime-class)
 
-(define (interp-Llambda-prime-mixin super-class)
+(define (interp_Llambda_prime-mixin super-class)
   (class super-class
     (super-new)
 
@@ -30,12 +30,12 @@
         [else ((super interp_exp env) e)]))
     ))
 
-(define interp-Llambda-prime-class
-  (interp-Llambda-prime-mixin
-   (interp-Lfun-prime-mixin
-    (interp-Lvecof-prime-mixin
-     (interp-Lvec-prime-mixin
-      interp-Llambda-class)))))
+(define interp_Llambda_prime-class
+  (interp_Llambda_prime-mixin
+   (interp_Lfun_prime-mixin
+    (interp_Lvecof_prime-mixin
+     (interp_Lvec_prime-mixin
+      interp_Llambda-class)))))
     
-(define (interp-Llambda-prime p)
-  (send (new interp-Llambda-prime-class) interp-program p))
+(define (interp_Llambda_prime p)
+  (send (new interp_Llambda_prime-class) interp-program p))

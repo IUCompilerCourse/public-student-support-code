@@ -1,16 +1,16 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cwhile.rkt")
-(require "type-check-Lvec.rkt")
-(provide type-check-Cvec type-check-Cvec-class)
+(require "type_check_Cwhile.rkt")
+(require "type_check_Lvec.rkt")
+(provide type_check_Cvec type_check_Cvec-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Cvec
+;; type_check_Cvec
 
-(define type-check-Cvec-class
-  (class (type-check-vec-mixin type-check-Cwhile-class)
+(define type_check_Cvec-class
+  (class (type_check_vec-mixin type_check_Cwhile-class)
     (super-new)
-    (inherit check-type-equal? exp-ready? type-check-exp)
+    (inherit check-type-equal? exp-ready? type_check_exp)
 
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
@@ -20,19 +20,19 @@
         [(GlobalValue name) (set)]
         [else (super free-vars-exp e)]))
         
-    (define/override ((type-check-stmt env) s)
+    (define/override ((type_check_stmt env) s)
       (match s
         [(Collect size) (void)]
         [(Prim 'vector-set! (list vec index rhs))
          #:when (and (exp-ready? vec env) (exp-ready? index env)
                      (exp-ready? rhs env))
-         ((type-check-exp env) s)]
-        [else ((super type-check-stmt env) s)]))
+         ((type_check_exp env) s)]
+        [else ((super type_check_stmt env) s)]))
     
     ))
 
-(define (type-check-Cvec p)
-  (send (new type-check-Cvec-class) type-check-program p))
+(define (type_check_Cvec p)
+  (send (new type_check_Cvec-class) type_check_program p))
 
 
   

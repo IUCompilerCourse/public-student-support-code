@@ -1,11 +1,11 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cvec.rkt")
-(require "type-check-Lvecof.rkt")
-(provide type-check-Cvecof type-check-Cvecof-class)
+(require "type_check_Cvec.rkt")
+(require "type_check_Lvecof.rkt")
+(provide type_check_Cvecof type_check_Cvecof-class)
 
-(define type-check-Cvecof-class
-  (class (type-check-vecof-mixin type-check-Cvec-class)
+(define type_check_Cvecof-class
+  (class (type_check_vecof-mixin type_check_Cvec-class)
     (super-new)
     (inherit check-type-equal?)
 
@@ -15,16 +15,16 @@
         [(AllocateArray e-len ty) (recur e-len)]
 	[else (super free-vars-exp e)]))
 
-    (define/override ((type-check-tail env block-env blocks) t)
-      (debug 'type-check-tail "Cif" t)
+    (define/override ((type_check_tail env block-env blocks) t)
+      (debug 'type_check_tail "Cif" t)
       (match t
         [(Prim 'exit '())
          '_]
-        [else ((super type-check-tail env block-env blocks) t)]))
+        [else ((super type_check_tail env block-env blocks) t)]))
     
     ))
 
-(define (type-check-Cvecof p)
-  (send (new type-check-Cvecof-class) type-check-program p))
+(define (type_check_Cvecof p)
+  (send (new type_check_Cvecof-class) type_check_program p))
 
         

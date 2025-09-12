@@ -1,10 +1,10 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lif.rkt")
-(require "interp-Cvar.rkt")
-(provide interp-Cif interp-Cif-mixin)
+(require "interp_Lif.rkt")
+(require "interp_Cvar.rkt")
+(provide interp_Cif interp_Cif-mixin)
 
-(define (interp-Cif-mixin super-class)
+(define (interp_Cif-mixin super-class)
   (class super-class
     (super-new)
     (inherit interp_exp)
@@ -42,8 +42,8 @@
         ))
     ))
 
-(define (interp-Cif p)
-  (define Cif-class (interp-Cif-mixin (interp-Cvar-mixin interp-Lif-class)))
+(define (interp_Cif p)
+  (define Cif-class (interp_Cif-mixin (interp_Cvar-mixin interp_Lif-class)))
   (send (new Cif-class) interp-program p))
 
   

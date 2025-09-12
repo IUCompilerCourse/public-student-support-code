@@ -1,26 +1,26 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cfun.rkt")
-(require "type-check-Llambda.rkt")
-(provide type-check-Clambda type-check-Clambda-class)
+(require "type_check_Cfun.rkt")
+(require "type_check_Llambda.rkt")
+(provide type_check_Clambda type_check_Clambda-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Clambda
+;; type_check_Clambda
 
-(define type-check-Clambda-class
-  (class (type-check-lambda-mixin type-check-Cfun-class)
+(define type_check_Clambda-class
+  (class (type_check_lambda-mixin type_check_Cfun-class)
     (super-new)
     (inherit type-equal? exp-ready?)
 
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "Clambda" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "Clambda" e)
+        (define recur (type_check_exp env))
         (match e
           [(UncheckedCast e t)
            (define-values (new-e new-t) (recur e))
 	   (values (UncheckedCast new-e t) t)]
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
 
     (define/override (free-vars-exp e)
       (define (recur e) (send this free-vars-exp e))
@@ -35,8 +35,8 @@
     
     ))
 
-(define (type-check-Clambda p)
-  (send (new type-check-Clambda-class) type-check-program p))
+(define (type_check_Clambda p)
+  (send (new type_check_Clambda-class) type_check_program p))
 
 
 

@@ -1,13 +1,13 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cif.rkt")
-(provide type-check-Cwhile type-check-Cwhile-class)
+(require "type_check_Cif.rkt")
+(provide type_check_Cwhile type_check_Cwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Cwhile
+;; type_check_Cwhile
 
-(define type-check-Cwhile-class
-  (class type-check-Cif-class
+(define type_check_Cwhile-class
+  (class type_check_Cif-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -48,23 +48,23 @@
              (set! type-changed #t)
              (dict-set! env x t)]))
 
-    (define/override ((type-check-atm env) e)
+    (define/override ((type_check_atm env) e)
       (match e
         [(Void) (values (Void) 'Void)]
         [else
-         ((super type-check-atm env) e)]
+         ((super type_check_atm env) e)]
         ))
     
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "Cwhile" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "Cwhile" e)
+        (define recur (type_check_exp env))
         (match e
           [(Void) (values (Void) 'Void)]
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
     
     ))
 
-(define (type-check-Cwhile p)
-  (send (new type-check-Cwhile-class) type-check-program p))
+(define (type_check_Cwhile p)
+  (send (new type_check_Cwhile-class) type_check_program p))
   

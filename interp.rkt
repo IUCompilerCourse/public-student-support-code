@@ -183,54 +183,54 @@
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; C0
 
-    (define/public (interp-C-exp env)
+    (define/public (interp_C_exp env)
       (lambda (ast)
         (define result
         (match ast
           [(Var x) (lookup x env)]
           [(Int n) n]
           [(Prim op args)
-	   (apply (interp-op op) (map (interp-C-exp env) args))]
+	   (apply (interp-op op) (map (interp_C_exp env) args))]
           [else
-           (error "C0/interp-C-exp unhandled" ast)]
+           (error "C0/interp_C_exp unhandled" ast)]
           ))
-        (verbose "C0/interp-C-exp" ast result)
+        (verbose "C0/interp_C_exp" ast result)
         result))
           
-    (define/public (interp-C-tail env)
+    (define/public (interp_C_tail env)
       (lambda (ast)
         (match ast
           [(Return e)
-           ((interp-C-exp env) e)]
+           ((interp_C_exp env) e)]
           ;; (return-from-tail v env)  hmm -Jeremy
           [(Seq s t)
-           (define new-env ((interp-C-stmt env) s))
-           ((interp-C-tail new-env) t)]
+           (define new-env ((interp_C_stmt env) s))
+           ((interp_C_tail new-env) t)]
           [else
-           (error "interp-C-tail unhandled" ast)]
+           (error "interp_C_tail unhandled" ast)]
           )))
     
-    (define/public (interp-C-stmt env)
+    (define/public (interp_C_stmt env)
       (lambda (ast)
-        (verbose "C0/interp-C-stmt" ast)
+        (verbose "C0/interp_C_stmt" ast)
         (match ast
           [(Assign (Var x) e)
-           (let ([v ((interp-C-exp env) e)])
+           (let ([v ((interp_C_exp env) e)])
              (cons (cons x v) env))]
           [(Prim op args)
-           ((interp-C-exp env) ast)
+           ((interp_C_exp env) ast)
            env]
           [else
-           (error "interp-C-stmt unhandled" ast)]
+           (error "interp_C_stmt unhandled" ast)]
           )))
           
-    (define/public (interp-C ast)
-      (debug "R1/interp-C" ast)
+    (define/public (interp_C ast)
+      (debug "R1/interp_C" ast)
       (match ast
         [(CProgram info blocks)
          (define start (dict-ref blocks 'start))
-         ((interp-C-tail '()) start)]
-        [else (error "no match in interp-C for " ast)]))
+         ((interp_C_tail '()) start)]
+        [else (error "no match in interp_C for " ast)]))
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; psuedo-x86 and x86
@@ -413,37 +413,37 @@
           [else ((super interp-scheme-exp env) ast)]
           )))
 
-    (define/override (interp-C-exp env)
+    (define/override (interp_C_exp env)
       (lambda (ast)
         (define result
 	(match ast
-          [(HasType e t) ((interp-C-exp env) e)]
+          [(HasType e t) ((interp_C_exp env) e)]
           [(Bool b) b]
-          [else ((super interp-C-exp env) ast)]
+          [else ((super interp_C_exp env) ast)]
           ))
-        (copious "R2/interp-C-exp" ast result)
+        (copious "R2/interp_C_exp" ast result)
         result))
 
-    (define/override (interp-C-tail env)    
+    (define/override (interp_C_tail env)    
       (lambda (ast)
-	(copious "R2/interp-C-tail" ast)
+	(copious "R2/interp_C_tail" ast)
 	(match ast
           [(IfStmt cnd thn els)
-           (if ((interp-C-exp env) cnd)
-               ((interp-C-tail env) thn)
-               ((interp-C-tail env) els))]
+           (if ((interp_C_exp env) cnd)
+               ((interp_C_tail env) thn)
+               ((interp_C_tail env) els))]
           [(Goto label)
-           ((interp-C-tail env) (goto-label label))]
-          [else ((super interp-C-tail env) ast)]
+           ((interp_C_tail env) (goto-label label))]
+          [else ((super interp_C_tail env) ast)]
           )))
       
-    (define/override (interp-C ast)
-      (copious "R2/interp-C" ast)
+    (define/override (interp_C ast)
+      (copious "R2/interp_C" ast)
       (match ast
         [(CProgram info blocks)
          (parameterize ([get-basic-blocks blocks])
-           (super interp-C (CProgram info blocks)))]
-        [else (error "R2/interp-C unhandled" ast)]
+           (super interp_C (CProgram info blocks)))]
+        [else (error "R2/interp_C unhandled" ast)]
         ))
 
     (define byte2full-reg
@@ -757,7 +757,7 @@
           [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           [(Collect size)
            (unless (exact-nonnegative-integer? size)
-             (error 'interp-C "invalid argument to collect in ~a" ast))
+             (error 'interp_C "invalid argument to collect in ~a" ast))
            (void)]
           #;[`(vector-ref ,e-vec ,e-i)
            (define vec (recur e-vec))
@@ -804,7 +804,7 @@
 		 label))
 	value))
 
-    (define/override (interp-C-exp env)
+    (define/override (interp_C_exp env)
       (lambda (ast)
         (define result
         (match ast
@@ -816,7 +816,7 @@
 	  [(CollectionNeeded? size)
 	   (when (or (eq? (unbox free_ptr) uninitialized)
 		     (eq? (unbox fromspace_end) uninitialized))
-	     (error 'interp-C "uninitialized state in ~a" ast))
+	     (error 'interp_C "uninitialized state in ~a" ast))
 	   #t]
 	  ;; allocate a vector of length l and type t that is initialized.
 	  [(Allocate l ty) (build-vector l (lambda a uninitialized))]
@@ -828,15 +828,15 @@
            (build-vector l (lambda a uninitialized))]
 	  [(AllocateProxy ty) (build-vector 3 (lambda a uninitialized))]
           [else
-           ((super interp-C-exp env) ast)]
+           ((super interp_C_exp env) ast)]
           ))
-        (copious "R3/interp-C-exp" ast result)
+        (copious "R3/interp_C_exp" ast result)
         result))
 
 
-    (define/override (interp-C-stmt env)
+    (define/override (interp_C_stmt env)
       (lambda (ast)
-        (copious "R3/interp-C-stmt" ast)
+        (copious "R3/interp_C_stmt" ast)
         (match ast
 	  ;; Determine if a collection is needed.
 	  ;; Which it isn't because vectors stored in the environment
@@ -846,29 +846,29 @@
 	  ;; Collection isn't needed or possible in this representation
 	  [(Collect size)
 	   (unless (exact-nonnegative-integer? size)
-	     (error 'interp-C "invalid argument to collect in ~a" ast))
+	     (error 'interp_C "invalid argument to collect in ~a" ast))
 	   env]
           [else
-           ((super interp-C-stmt env) ast)]
+           ((super interp_C_stmt env) ast)]
           )))
 
-    (define/override (interp-C-tail env)
+    (define/override (interp_C_tail env)
       (lambda (ast)
-        (copious "R3/interp-C-tail" ast)
+        (copious "R3/interp_C_tail" ast)
         (match ast
           [(Seq s t)
-           (define new-env ((interp-C-stmt env) s))
-           ((interp-C-tail new-env) t)]
-          [else ((super interp-C-tail env) ast)])))
+           (define new-env ((interp_C_stmt env) s))
+           ((interp_C_tail new-env) t)]
+          [else ((super interp_C_tail env) ast)])))
     
-    (define/override (interp-C ast)
-      (copious "R3/interp-C" ast)
+    (define/override (interp_C ast)
+      (copious "R3/interp_C" ast)
       (match ast
         [(CProgram info blocks)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
-         (super interp-C (CProgram info blocks))]
-        [else (error "R3/interp-C unhandled" ast)]))
+         (super interp_C (CProgram info blocks))]
+        [else (error "R3/interp_C unhandled" ast)]))
 
     (define/override (interp-x86-exp env)
       (lambda (ast)
@@ -1146,74 +1146,74 @@
 	result
 	))
 
-    (define/override (interp-C-exp env)
+    (define/override (interp_C_exp env)
       (lambda (ast)
         (define result
 	(match ast
           [(FunRef f n)
            (lookup f env)]
           [(Call f args)
-           (define arg-vals (map (interp-C-exp env) args))
-           (define f-val ((interp-C-exp env) f))
+           (define arg-vals (map (interp_C_exp env) args))
+           (define f-val ((interp_C_exp env) f))
            (match f-val
              [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f '_start))
               (define new-env (append (map cons xs arg-vals) def-env))
               (parameterize ([get-basic-blocks blocks])
-                ((interp-C-tail new-env) (dict-ref blocks f-start)))]
-             [else (error "interp-C, expected a function, not" f-val)])]
+                ((interp_C_tail new-env) (dict-ref blocks f-start)))]
+             [else (error "interp_C, expected a function, not" f-val)])]
           [else
-           ((super interp-C-exp env) ast)]
+           ((super interp_C_exp env) ast)]
            ))
-	(verbose "R4/interp-C-exp" ast result)
+	(verbose "R4/interp_C_exp" ast result)
         result))
 
-    (define/override (interp-C-tail env)
+    (define/override (interp_C_tail env)
       (lambda (ast)
         (define result
 	(match ast
           [(TailCall f args)
-           (define arg-vals (map (interp-C-exp env) args))
-           (define f-val ((interp-C-exp env) f))
+           (define arg-vals (map (interp_C_exp env) args))
+           (define f-val ((interp_C_exp env) f))
            (match f-val
              [(CFunction xs info blocks def-env)
               (define f (dict-ref info 'name))
               (define f-start (symbol-append f '_start))
               (define new-env (append (map cons xs arg-vals) def-env))
               (parameterize ([get-basic-blocks blocks])
-                ((interp-C-tail new-env) (dict-ref blocks f-start)))]
-             [else (error "interp-C, expected a funnction, not" f-val)])]
+                ((interp_C_tail new-env) (dict-ref blocks f-start)))]
+             [else (error "interp_C, expected a funnction, not" f-val)])]
           [else
-           ((super interp-C-tail env) ast)]
+           ((super interp_C_tail env) ast)]
           ))
-	(verbose "R4/interp-C-tail" ast result)
+	(verbose "R4/interp_C_tail" ast result)
         result))
 
-    (define/public (interp-C-def ast)
-      (verbose "R4/interp-C-def" ast)
+    (define/public (interp_C_def ast)
+      (verbose "R4/interp_C_def" ast)
       (match ast
         [(Def f `([,xs : ,ps] ...) rt info blocks)
          (mcons f (CFunction xs `((name . ,f)) blocks '()))]
         [else
-         (error "R4/interp-C-def unhandled" ast)]
+         (error "R4/interp_C_def unhandled" ast)]
         ))
     
-    (define/override (interp-C ast)
-      (verbose "R4/interp-C" ast)
+    (define/override (interp_C ast)
+      (verbose "R4/interp_C" ast)
       (match ast
         [(ProgramDefs info ds)
          ((initialize!) runtime-config:rootstack-size
                         runtime-config:heap-size)
-         (define top-level (for/list ([d ds]) (interp-C-def d)))
+         (define top-level (for/list ([d ds]) (interp_C_def d)))
          ;; tie the knot
          (for/list ([b top-level])
            (set-mcdr! b (match (mcdr b)
                           [(CFunction xs info blocks '())
                            (CFunction xs info blocks top-level)])))
-         ((interp-C-tail top-level) (TailCall (Var 'main) '()))]
+         ((interp_C_tail top-level) (TailCall (Var 'main) '()))]
         [else
-         (error "R4/interp-C unhandled" ast)]
+         (error "R4/interp_C unhandled" ast)]
         ))
 
     (define (stack-arg-name n)
@@ -1616,14 +1616,14 @@
         (verbose "R6/interp-F result of" ast result)
         result))
 
-    (define/override (interp-C-exp env)
+    (define/override (interp_C_exp env)
       (lambda (ast)
         (define result
 	(match ast
 	  #;[(Inject e t)
-	   `(tagged ,((interp-C-exp env) e) ,t)]
+	   `(tagged ,((interp_C_exp env) e) ,t)]
 	  #;[(Project e t2)
-	   (define v ((interp-C-exp env) e))
+	   (define v ((interp_C_exp env) e))
 	   (match v
 	      [`(tagged ,v1 ,t1)
 	       (cond [(tyeq? t1 t2)
@@ -1633,11 +1633,11 @@
 	      [else
 	       (error "in project, expected injected value" v)])]
           [(ValueOf e ty)
-           ((interp-op 'value-of-any) ((interp-C-exp env) e))]
+           ((interp-op 'value-of-any) ((interp_C_exp env) e))]
 	  [else
-	   ((super interp-C-exp env) ast)]
+	   ((super interp_C_exp env) ast)]
 	  ))
-        (verbose "R6/interp-C-exp ===> " ast result)
+        (verbose "R6/interp_C_exp ===> " ast result)
         result))
 
     #;(define/override (display-by-type ty val)
@@ -1668,7 +1668,7 @@
 (define interp-R8-class
   (class interp-R6-class-alt
     (super-new)
-    (inherit initialize! interp-C-exp)
+    (inherit initialize! interp_C_exp)
     (inherit-field result)
 
     (define/override (apply-fun interp fun-val arg-vals)
@@ -1726,14 +1726,14 @@
         (verbose "R8/interp-F result of" ast result)
         result))
 
-    (define/override (interp-C-stmt env)
+    (define/override (interp_C_stmt env)
       (lambda (ast)
-        (copious "R8/interp-C-stmt" ast)
+        (copious "R8/interp_C_stmt" ast)
         (match ast
           [(Call f args)
-           ((interp-C-exp env) ast)
+           ((interp_C_exp env) ast)
            env]
-          [else ((super interp-C-stmt env) ast)]
+          [else ((super interp_C_stmt env) ast)]
           )))
     
     )) ;; interp-R8-class

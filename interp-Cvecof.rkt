@@ -1,14 +1,14 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Cvar.rkt")
-(require "interp-Cif.rkt")
-(require "interp-Cvec.rkt")
-(require "interp-Cwhile.rkt")
-(require "interp-Cvec.rkt")
-(require "interp-Lvecof-prime.rkt")
-(provide interp-Cvecof interp-Cvecof-mixin interp-Cvecof-class)
+(require "interp_Cvar.rkt")
+(require "interp_Cif.rkt")
+(require "interp_Cvec.rkt")
+(require "interp_Cwhile.rkt")
+(require "interp_Cvec.rkt")
+(require "interp_Lvecof_prime.rkt")
+(provide interp_Cvecof interp_Cvecof-mixin interp_Cvecof-class)
 
-(define (interp-Cvecof-mixin super-class)
+(define (interp_Cvecof-mixin super-class)
   (class super-class
     (super-new)
     (inherit interp_exp)
@@ -22,15 +22,15 @@
 
     ))
 
-(define interp-Cvecof-class
-  (interp-Cvecof-mixin
-   (interp-Cvec-mixin
-    (interp-Cwhile-mixin
-     (interp-Cif-mixin
-      (interp-Cvar-mixin
-       interp-Lvecof-prime-class))))))
+(define interp_Cvecof-class
+  (interp_Cvecof-mixin
+   (interp_Cvec-mixin
+    (interp_Cwhile-mixin
+     (interp_Cif-mixin
+      (interp_Cvar-mixin
+       interp_Lvecof_prime-class))))))
 
-(define (interp-Cvecof p)
-  (send (new interp-Cvecof-class) interp-program p))
+(define (interp_Cvecof p)
+  (send (new interp_Cvecof-class) interp-program p))
 
 

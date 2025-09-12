@@ -1,13 +1,13 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lvec-prime.rkt")
-(require "interp-Cvar.rkt")
-(require "interp-Cif.rkt")
-(require "interp-Cwhile.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Cvar.rkt")
+(require "interp_Cif.rkt")
+(require "interp_Cwhile.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Cvec interp-Cvec-mixin)
+(provide interp_Cvec interp_Cvec-mixin)
 
-(define (interp-Cvec-mixin super-class)
+(define (interp_Cvec-mixin super-class)
   (class super-class
     (super-new)
     (inherit interp_exp initialize!)
@@ -31,7 +31,7 @@
 	  ;; Collection isn't needed or possible in this representation
 	  [(Collect size)
 	   (unless (exact-nonnegative-integer? size)
-	     (error 'interp-C "invalid argument to collect in ~a" ast))
+	     (error 'interp_C "invalid argument to collect in ~a" ast))
 	   env]
           [else ((super interp-stmt env) ast)]
           )))
@@ -56,11 +56,11 @@
         [else (error "interp-program unhandled" ast)]))
     ))
 
-(define (interp-Cvec p)
-  (define Cvec-class (interp-Cvec-mixin
-                      (interp-Cwhile-mixin
-                       (interp-Cif-mixin
-                        (interp-Cvar-mixin
-                         interp-Lvec-prime-class)))))
+(define (interp_Cvec p)
+  (define Cvec-class (interp_Cvec-mixin
+                      (interp_Cwhile-mixin
+                       (interp_Cif-mixin
+                        (interp_Cvar-mixin
+                         interp_Lvec_prime-class)))))
   (send (new Cvec-class) interp-program p))
 

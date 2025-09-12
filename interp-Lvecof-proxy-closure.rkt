@@ -1,11 +1,11 @@
 #lang racket
-(require "interp-Lwhile-proxy-closure.rkt")
-(require "interp-Lvecof-prime.rkt")
-(provide interp-Lvecof-proxy-closure interp-Lvecof-proxy-closure-class)
+(require "interp_Lwhile_proxy_closure.rkt")
+(require "interp_Lvecof_prime.rkt")
+(provide interp_Lvecof_proxy_closure interp_Lvecof_proxy_closure-class)
 
 
-(define interp-Lvecof-proxy-closure-class
-  (interp-Lwhile-proxy-closure-mixin interp-Lvecof-prime-class))
+(define interp_Lvecof_proxy_closure-class
+  (interp_Lwhile_proxy_closure-mixin interp_Lvecof_prime-class))
 
-(define (interp-Lvecof-proxy-closure p)
-  (send (new interp-Lvecof-proxy-closure-class) interp-program p))
+(define (interp_Lvecof_proxy_closure p)
+  (send (new interp_Lvecof_proxy_closure-class) interp-program p))

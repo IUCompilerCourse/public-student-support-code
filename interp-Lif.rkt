@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lvar.rkt")
-(provide interp-Lif interp-Lif-class)
+(require "interp_Lvar.rkt")
+(provide interp_Lif interp_Lif-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lif-class
-  (class interp-Lvar-class
+(define interp_Lif-class
+  (class interp_Lvar-class
     (super-new)
 
     (define/public (interp-op op)
@@ -64,8 +64,8 @@
         ))
     ))
 
-(define (interp-Lif p)
-  (send (new interp-Lif-class) interp-program p))
+(define (interp_Lif p)
+  (send (new interp_Lif-class) interp-program p))
 
 #;(define (interp_exp env)
-  (send (new interp-Lif-class) interp_exp env))
+  (send (new interp_Lif-class) interp_exp env))

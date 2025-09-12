@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Llambda.rkt")
-(provide interp-Lany interp-Lany-class)
+(require "interp_Llambda.rkt")
+(provide interp_Lany interp_Lany-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lany-class
-  (class interp-Llambda-class
+(define interp_Lany-class
+  (class interp_Llambda-class
     (super-new)
 
     (define/override (interp-op op)
@@ -76,5 +76,5 @@
         [else ((super interp_exp env) e)]))
     ))
 
-(define (interp-Lany p)
-  (send (new interp-Lany-class) interp-program p))
+(define (interp_Lany p)
+  (send (new interp_Lany-class) interp-program p))

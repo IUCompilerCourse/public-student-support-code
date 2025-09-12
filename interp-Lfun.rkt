@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lvecof.rkt")
-(provide interp-Lfun interp-Lfun-class)
+(require "interp_Lvecof.rkt")
+(provide interp_Lfun interp_Lfun-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lfun-class
-  (class interp-Lvecof-class
+(define interp_Lfun-class
+  (class interp_Lvecof-class
     (super-new)
 
     (define/public (apply-fun fun-val arg-vals e)
@@ -39,7 +39,7 @@
         ))
 
     (define/override (interp-program p)
-      (verbose "interp-Lfun" p)
+      (verbose "interp_Lfun" p)
       (match p
         [(ProgramDefsExp info ds body)
          (let ([top-level (for/list ([d ds]) (interp-def d))])
@@ -61,5 +61,5 @@
         ))
     ))
 
-(define (interp-Lfun p)
-  (send (new interp-Lfun-class) interp-program p))
+(define (interp_Lfun p)
+  (send (new interp_Lfun-class) interp-program p))

@@ -1,7 +1,7 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(provide interp_Lint interp-Lint-class)
+(provide interp_Lint interp_Lint-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interpreter for Lint: integer arithmetic
@@ -41,7 +41,7 @@
 ;; This version of the interpreter for Lint is the base class
 ;; for interp-Rvar-class in interp-Rvar.rkt.
 
-(define interp-Lint-class
+(define interp_Lint-class
   (class object%
     (super-new)
     

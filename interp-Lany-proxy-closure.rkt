@@ -1,11 +1,11 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lany-prime.rkt")
-(provide interp-Lany-proxy-closure
-         interp-Lany-proxy-closure-mixin
-         interp-Lany-proxy-closure-class)
+(require "interp_Lany_prime.rkt")
+(provide interp_Lany_proxy_closure
+         interp_Lany_proxy_closure-mixin
+         interp_Lany_proxy_closure-class)
 
-(define (interp-Lany-proxy-closure-mixin super-class)
+(define (interp_Lany_proxy_closure-mixin super-class)
   (class super-class
     (super-new)
     (inherit apply-fun interp-def)
@@ -79,9 +79,9 @@
     
     ))
 
-(define interp-Lany-proxy-closure-class
-  (interp-Lany-proxy-closure-mixin interp-Lany-prime-class))
+(define interp_Lany_proxy_closure-class
+  (interp_Lany_proxy_closure-mixin interp_Lany_prime-class))
 
-(define (interp-Lany-proxy-closure p)
-  (send (new interp-Lany-proxy-closure-class) interp-program p))
+(define (interp_Lany_proxy_closure p)
+  (send (new interp_Lany_proxy_closure-class) interp-program p))
 

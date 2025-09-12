@@ -2,17 +2,17 @@
 (require graph)
 (require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Cvar.rkt")
-(require "type-check-Lif.rkt")
-(provide type-check-Cif type-check-Cif-class)
+(require "type_check_Cvar.rkt")
+(require "type_check_Lif.rkt")
+(provide type_check_Cif type_check_Cif-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Cif
+;; type_check_Cif
 
-(define type-check-Cif-class
-  (class (type-check-if-mixin type-check-Cvar-class)
+(define type_check_Cif-class
+  (class (type_check_if-mixin type_check_Cvar-class)
     (super-new)
-    (inherit type-check-exp type-equal? check-type-equal? combine-types)
+    (inherit type_check_exp type-equal? check-type-equal? combine-types)
 
     ;; TODO: move some things from here to later type checkers
     (define/public (free-vars-exp e)
@@ -52,56 +52,56 @@
              (set! type-changed #t)
              (dict-set! env x t)]))
     
-    (define/override ((type-check-atm env) e)
+    (define/override ((type_check_atm env) e)
       (match e
         [(Bool b) (values (Bool b) 'Boolean)]
         [else
-         ((super type-check-atm env) e)]
+         ((super type_check_atm env) e)]
         ))
     
-    (define/override (type-check-stmt env)
+    (define/override (type_check_stmt env)
       (lambda (s)
-        (debug 'type-check-stmt "Cwhile" s env)
+        (debug 'type_check_stmt "Cwhile" s env)
         (match s
           [(Assign (Var x) e)
            #:when (exp-ready? e env)
-           (define-values (e^ t) ((type-check-exp env) e))
+           (define-values (e^ t) ((type_check_exp env) e))
            (update-type x t env)]
           [(Assign (Var x) e)
-           (debug 'type-check-stmt "RHS not ready" e)
+           (debug 'type_check_stmt "RHS not ready" e)
            (void)]
           [(Prim 'read '()) (void)]
           [else (void)]
           )))
     
-    (define/override ((type-check-tail env block-env blocks) t)
-      (debug 'type-check-tail "Cif" t)
+    (define/override ((type_check_tail env block-env blocks) t)
+      (debug 'type_check_tail "Cif" t)
       (match t
         [(Return e)
          #:when (exp-ready? e env)
-         (define-values (e^ t) ((type-check-exp env) e))
+         (define-values (e^ t) ((type_check_exp env) e))
          t]
         [(Return e) '_]      
         [(Seq s t)
-         ((type-check-stmt env) s)
-         ((type-check-tail env block-env blocks) t)]
+         ((type_check_stmt env) s)
+         ((type_check_tail env block-env blocks) t)]
         [(Goto label)
          (cond [(dict-has-key? block-env label)
                 (dict-ref block-env label)]
                [else '_])]
         [(IfStmt cnd tail1 tail2)
          (cond [(exp-ready? cnd env)
-                (define-values (c Tc) ((type-check-exp env) cnd))
+                (define-values (c Tc) ((type_check_exp env) cnd))
                 (unless (type-equal? Tc 'Boolean)
                   (error "type error: condition should be Boolean, not" Tc))
                 ])
-         (define T1 ((type-check-tail env block-env blocks) tail1))
-         (define T2 ((type-check-tail env block-env blocks) tail2))
+         (define T1 ((type_check_tail env block-env blocks) tail1))
+         (define T2 ((type_check_tail env block-env blocks) tail2))
          (unless (type-equal? T1 T2)
            (error "type error: branches of if should have same type, not"
                   T1 T2))
          (combine-types T1 T2)]
-        [else ((super type-check-tail env block-env blocks) t)]))
+        [else ((super type_check_tail env block-env blocks) t)]))
 
     (define/public (adjacent-tail t)
       (match t
@@ -121,31 +121,31 @@
 
     ;; Do the iterative dataflow analysis because of deadcode
     ;; in the un-optimized version of the compiler. -Jeremy
-    (define/public (type-check-blocks info blocks env start)
+    (define/public (type_check_blocks info blocks env start)
       (define block-env (make-hash))
       (set! type-changed #t)
       (define (iterate)
         (cond [type-changed
                (set! type-changed #f)
                (for ([(label tail) (in-dict blocks)])
-                 (define t ((type-check-tail env block-env blocks) tail))
+                 (define t ((type_check_tail env block-env blocks) tail))
                  (update-type label t block-env)
                  )
-               (verbose "type-check-blocks" env block-env)
+               (verbose "type_check_blocks" env block-env)
                (iterate)]
               [else (void)]))
       (iterate)
       (unless (dict-has-key? block-env start)
-        (error 'type-check-blocks "failed to infer type for ~a" start))
+        (error 'type_check_blocks "failed to infer type for ~a" start))
       (define t (dict-ref block-env start))
       (values env t))
 
-    (define/override (type-check-program p)
+    (define/override (type_check_program p)
       (match p
         [(CProgram info blocks)
          (define empty-env (make-hash))
          (define-values (env t)
-           (type-check-blocks info blocks empty-env 'start))
+           (type_check_blocks info blocks empty-env 'start))
          (unless (type-equal? t 'Integer)
            (error "return type of program must be Integer, not" t))
          (define locals-types
@@ -153,10 +153,10 @@
              (cons x t)))
          (define new-info (dict-set info 'locals-types locals-types))
          (CProgram new-info blocks)]
-        [else (super type-check-program p)]))
+        [else (super type_check_program p)]))
     
     ))
 
-(define (type-check-Cif p)
-  (send (new type-check-Cif-class) type-check-program p))
+(define (type_check_Cif p)
+  (send (new type_check_Cif-class) type_check_program p))
   

@@ -1,11 +1,11 @@
 #lang racket
 ;(require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lany.rkt")
-(provide interp-Lcast interp-Lcast-class)
+(require "interp_Lany.rkt")
+(provide interp_Lcast interp_Lcast-class)
 
-(define interp-Lcast-class
-  (class interp-Lany-class
+(define interp_Lcast-class
+  (class interp_Lany-class
     (super-new)
     (inherit apply-fun apply-inject apply-project)
 
@@ -107,6 +107,6 @@
     
     ))
 
-(define (interp-Lcast p)
-  (send (new interp-Lcast-class) interp-program p))
+(define (interp_Lcast p)
+  (send (new interp_Lcast-class) interp-program p))
 

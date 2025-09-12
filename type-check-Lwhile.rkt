@@ -2,15 +2,15 @@
 ;(require graph)
 ;(require "multigraph.rkt")
 (require "utilities.rkt")
-(require "type-check-Lif.rkt")
-(provide type-check-Lwhile type-check-Lwhile-class)
+(require "type_check_Lif.rkt")
+(provide type_check_Lwhile type_check_Lwhile-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           while, begin, set!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define type-check-Lwhile-class
-  (class type-check-Lif-class
+(define type_check_Lwhile-class
+  (class type_check_Lif-class
     (super-new)
     (inherit check-type-equal?)
 
@@ -22,10 +22,10 @@
         [(t1 '_) #t]
         [(other wise) (equal? t1 t2)]))
     
-    (define/override (type-check-exp env)
+    (define/override (type_check_exp env)
       (lambda (e)
-        (debug 'type-check-exp "Lwhile" e)
-        (define recur (type-check-exp env))
+        (debug 'type_check_exp "Lwhile" e)
+        (define recur (type_check_exp env))
         (match e
           [(SetBang x rhs)
            (define-values (rhs^ rhsT) (recur rhs))
@@ -37,7 +37,7 @@
           [(WhileLoop cnd body)
            (define-values (cnd^ Tc) (recur cnd))
            (check-type-equal? Tc 'Boolean e)
-           (define-values (body^ Tbody) ((type-check-exp env) body))
+           (define-values (body^ Tbody) ((type_check_exp env) body))
            (values (WhileLoop cnd^ body^) 'Void)]
           [(Begin es body)
            (define-values (es^ ts)
@@ -45,12 +45,12 @@
            (define-values (body^ Tbody) (recur body))
            (values (Begin es^ body^) Tbody)]
           [(Void) (values (Void) 'Void)]
-          [else ((super type-check-exp env) e)])))
+          [else ((super type_check_exp env) e)])))
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Lwhile
+;; type_check_Lwhile
 
-(define (type-check-Lwhile p)
-  (send (new type-check-Lwhile-class) type-check-program p))
+(define (type_check_Lwhile p)
+  (send (new type_check_Lwhile-class) type_check_program p))
 

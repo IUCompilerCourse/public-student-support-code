@@ -1,16 +1,16 @@
 #lang racket
 (require "utilities.rkt")
-(require "type-check-Cvecof.rkt")
-(require "type-check-Lfun.rkt")
-(provide type-check-Cfun type-check-Cfun-class)
+(require "type_check_Cvecof.rkt")
+(require "type_check_Lfun.rkt")
+(provide type_check_Cfun type_check_Cfun-class)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; type-check-Cfun
+;; type_check_Cfun
 
-(define type-check-Cfun-class
-  (class (type-check-fun-mixin type-check-Cvecof-class)
+(define type_check_Cfun-class
+  (class (type_check_fun-mixin type_check_Cvecof-class)
     (super-new)
-    (inherit type-equal? type-check-apply type-check-blocks fun-def-type
+    (inherit type-equal? type_check_apply type_check_blocks fun-def-type
              exp-ready?)
     
     (define/override (free-vars-exp e)
@@ -22,37 +22,37 @@
         [(Call f arg*) (apply set-union (cons (recur f) (map recur arg*)))]
         [else (super free-vars-exp e)]))
     
-    (define/override ((type-check-tail env block-env G) t)
-      (debug 'type-check-tail "Cfun" t)
+    (define/override ((type_check_tail env block-env G) t)
+      (debug 'type_check_tail "Cfun" t)
       (match t
         [(TailCall f arg*)
          #:when (and (exp-ready? f env)
                      (for/and ([arg arg*]) (exp-ready? arg env)))
-         (define-values (f^ arg*^ rt) (type-check-apply env f arg*))
+         (define-values (f^ arg*^ rt) (type_check_apply env f arg*))
          rt]
         [(TailCall f arg*) '_]
-        [else ((super type-check-tail env block-env G) t)]
+        [else ((super type_check_tail env block-env G) t)]
         ))
 
-    (define/override ((type-check-stmt env) s)
+    (define/override ((type_check_stmt env) s)
       (match s
         [(Call e es)
          #:when (and (exp-ready? e env)
                      (for/and ([arg es]) (exp-ready? arg env)))
-         (define-values (e^ es^ rt) (type-check-apply env e es))
+         (define-values (e^ es^ rt) (type_check_apply env e es))
          (void)]
-        [else ((super type-check-stmt env) s)]))
+        [else ((super type_check_stmt env) s)]))
     
-    (define/public (type-check-def global-env)
+    (define/public (type_check_def global-env)
       (lambda (d)
         (match d
           [(Def f (and p:t* (list `[,xs : ,ps] ...)) rt info blocks)
            (define new-env (append (map cons xs ps) global-env))
            (define env^ (make-hash new-env))
            (define-values (env t)
-             (type-check-blocks info blocks env^ (symbol-append f '_start)))
+             (type_check_blocks info blocks env^ (symbol-append f '_start)))
            (unless (type-equal? t rt)
-             (error 'type-check "mismatch in return type, ~a != ~a" t rt))
+             (error 'type_check "mismatch in return type, ~a != ~a" t rt))
            (define locals-types
              (for/list ([(x t) (in-dict env)]
                         #:when (not (dict-has-key? global-env x)))
@@ -61,17 +61,17 @@
            (Def f p:t* rt new-info blocks)]
           )))
 
-    (define/override (type-check-program p)
+    (define/override (type_check_program p)
       (match p
         [(ProgramDefs info ds)
          (define new-env (for/list ([d ds]) 
                            (cons (Def-name d) (fun-def-type d))))
          (define ds^ (for/list ([d ds])
-                       ((type-check-def new-env) d)))
+                       ((type_check_def new-env) d)))
          (ProgramDefs info ds^)]
-        [else (error 'type-check-program "expected a C program, not ~a" p)]
+        [else (error 'type_check_program "expected a C program, not ~a" p)]
         ))
     ))
 
-(define (type-check-Cfun p)
-  (send (new type-check-Cfun-class) type-check-program p))
+(define (type_check_Cfun p)
+  (send (new type_check_Cfun-class) type_check_program p))

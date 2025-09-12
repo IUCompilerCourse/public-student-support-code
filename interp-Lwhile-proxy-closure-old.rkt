@@ -1,11 +1,11 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lwhile-prime.rkt")
-(provide interp-Lwhile-proxy-closure
-         interp-Lwhile-proxy-closure-mixin
-         interp-Lwhile-proxy-closure-class)
+(require "interp_Lwhile_prime.rkt")
+(provide interp_Lwhile_proxy_closure
+         interp_Lwhile_proxy_closure-mixin
+         interp_Lwhile_proxy_closure-class)
 
-(define (interp-Lwhile-proxy-closure-mixin super-class)
+(define (interp_Lwhile_proxy_closure-mixin super-class)
   (class super-class
     (super-new)
     (inherit apply-fun interp-def)
@@ -70,9 +70,9 @@
     
     ))
 
-(define interp-Lwhile-proxy-closure-class
-  (interp-Lwhile-proxy-closure-mixin interp-Lwhile-prime-class))
+(define interp_Lwhile_proxy_closure-class
+  (interp_Lwhile_proxy_closure-mixin interp_Lwhile_prime-class))
 
-(define (interp-Lwhile-proxy-closure p)
-  (send (new interp-Lwhile-proxy-closure-class) interp-program p))
+(define (interp_Lwhile_proxy_closure p)
+  (send (new interp_Lwhile_proxy_closure-class) interp-program p))
 

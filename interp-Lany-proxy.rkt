@@ -1,12 +1,12 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lany-prime.rkt")
+(require "interp_Lany_prime.rkt")
 (require (prefix-in runtime-config: "runtime-config.rkt"))
-(provide interp-Lany-proxy interp-Lany-proxy-class)
+(provide interp_Lany_proxy interp_Lany_proxy-class)
 
-(define interp-Lany-proxy-class
-  (class interp-Lany-prime-class
+(define interp_Lany_proxy-class
+  (class interp_Lany_prime-class
     (super-new)
     (inherit apply-fun initialize! interp-def interp_exp)
 
@@ -96,6 +96,6 @@
     
     ))
 
-(define (interp-Lany-proxy p)
-  (send (new interp-Lany-proxy-class) interp-program p))
+(define (interp_Lany_proxy p)
+  (send (new interp_Lany_proxy-class) interp-program p))
 

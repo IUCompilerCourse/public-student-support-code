@@ -2,15 +2,15 @@
 (require racket/fixnum)
 (require racket/dict)
 (require "utilities.rkt")
-(require "interp-Lint.rkt")
-(provide interp_Lvar interp-Lvar-class)
+(require "interp_Lint.rkt")
+(provide interp_Lvar interp_Lvar-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lvar-class
-  (class interp-Lint-class
+(define interp_Lvar-class
+  (class interp_Lint-class
     (super-new)
     
     (define/override ((interp_exp env) e)
@@ -25,5 +25,5 @@
     ))
 
 (define (interp_Lvar p)
-  (send (new interp-Lvar-class) interp-program p))
+  (send (new interp_Lvar-class) interp-program p))
 

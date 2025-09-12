@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lfun.rkt")
-(provide interp-Llambda interp-Llambda-class)
+(require "interp_Lfun.rkt")
+(provide interp_Llambda interp_Llambda-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Llambda-class
-  (class interp-Lfun-class
+(define interp_Llambda-class
+  (class interp_Lfun-class
     (super-new)
 
     (define/override (interp-op op)
@@ -32,6 +32,6 @@
         [else ((super interp_exp env) e)]))
     ))
 
-(define (interp-Llambda p)
-  (send (new interp-Llambda-class) interp-program p))
+(define (interp_Llambda p)
+  (send (new interp_Llambda-class) interp-program p))
  

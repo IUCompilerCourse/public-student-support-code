@@ -1,11 +1,11 @@
 #lang racket
 (require "utilities.rkt")
-(require "interp-Lwhile.rkt")
-(require "interp-Cvar.rkt")
-(require "interp-Cif.rkt")
-(provide interp-Cwhile interp-Cwhile-mixin)
+(require "interp_Lwhile.rkt")
+(require "interp_Cvar.rkt")
+(require "interp_Cif.rkt")
+(provide interp_Cwhile interp_Cwhile-mixin)
 
-(define (interp-Cwhile-mixin super-class)
+(define (interp_Cwhile-mixin super-class)
   (class super-class
     (super-new)
     (inherit interp_exp); call-function
@@ -25,10 +25,10 @@
 
     ))
 
-(define Cwhile-class (interp-Cwhile-mixin
-                     (interp-Cif-mixin
-                      (interp-Cvar-mixin
-                       interp-Lwhile-class))))
+(define Cwhile-class (interp_Cwhile-mixin
+                     (interp_Cif-mixin
+                      (interp_Cvar-mixin
+                       interp_Lwhile-class))))
 
-(define (interp-Cwhile p)
+(define (interp_Cwhile p)
   (send (new Cwhile-class) interp-program p))

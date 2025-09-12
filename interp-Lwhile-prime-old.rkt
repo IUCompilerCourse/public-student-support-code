@@ -1,17 +1,17 @@
 #lang racket
-(require "interp-Lvec-prime.rkt")
-(require "interp-Lfun-prime.rkt")
-(require "interp-Llambda-prime.rkt")
-(require "interp-Lany-prime.rkt")
-(require "interp-Lwhile.rkt")
+(require "interp_Lvec_prime.rkt")
+(require "interp_Lfun_prime.rkt")
+(require "interp_Llambda_prime.rkt")
+(require "interp_Lany_prime.rkt")
+(require "interp_Lwhile.rkt")
 (require "utilities.rkt")
-(provide interp-Lwhile-prime interp-Lwhile-prime-class)
+(provide interp_Lwhile_prime interp_Lwhile_prime-class)
 
-(define interp-Lwhile-prime-class
-  (interp-Lany-prime-mixin
-   (interp-Llambda-prime-mixin
-    (interp-Lfun-prime-mixin
-     (interp-Lvec-prime-mixin interp-Lwhile-class)))))
+(define interp_Lwhile_prime-class
+  (interp_Lany_prime-mixin
+   (interp_Llambda_prime-mixin
+    (interp_Lfun_prime-mixin
+     (interp_Lvec_prime-mixin interp_Lwhile-class)))))
     
-(define (interp-Lwhile-prime p)
-  (send (new interp-Lwhile-prime-class) interp-program p))
+(define (interp_Lwhile_prime p)
+  (send (new interp_Lwhile_prime-class) interp-program p))

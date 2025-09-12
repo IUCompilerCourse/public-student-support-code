@@ -1,15 +1,15 @@
 #lang racket
 (require racket/fixnum)
 (require "utilities.rkt")
-(require "interp-Lif.rkt")
-(provide interp-Lwhile interp-Lwhile-class)
+(require "interp_Lif.rkt")
+(provide interp_Lwhile interp_Lwhile-class)
 
 ;; Note to maintainers of this code:
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code.
 
-(define interp-Lwhile-class
-  (class interp-Lif-class
+(define interp_Lwhile-class
+  (class interp_Lif-class
     (super-new)
 
     (define/override ((interp_exp env) e)
@@ -38,6 +38,6 @@
       result)
     ))
 
-(define (interp-Lwhile p)
-  (send (new interp-Lwhile-class) interp-program p))
+(define (interp_Lwhile p)
+  (send (new interp_Lwhile-class) interp-program p))
 
