@@ -3,7 +3,7 @@
 (require "type_check_Lvec.rkt")
 (require "type_check_Lvecof.rkt")
 (require "type_check_Llambda.rkt")
-(provide type_check_Lany type_check_Lany-has-type
+(provide type_check_Lany type_check_Lany_has_type
          type_check_Lany-class type_check_any-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -165,7 +165,7 @@
 (define (type_check_Lany p)
   (send (new type_check_Lany-class) type_check_program p))
 
-(define (type_check_Lany-has-type p)
+(define (type_check_Lany_has_type p)
   (begin
     (typed-vec #t)
     (typed-vecof #t)

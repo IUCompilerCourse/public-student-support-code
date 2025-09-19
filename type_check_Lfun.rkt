@@ -2,7 +2,7 @@
 (require "utilities.rkt")
 (require "type_check_Lvec.rkt")
 (require "type_check_Lvecof.rkt")
-(provide type_check_Lfun type_check_Lfun-has-type
+(provide type_check_Lfun type_check_Lfun_has_type
          type_check_Lfun-class type_check_fun-mixin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,7 +112,7 @@
 (define (type_check_Lfun p)
   (send (new type_check_Lfun-class) type_check_program p))
 
-(define (type_check_Lfun-has-type p)
+(define (type_check_Lfun_has_type p)
   (begin
     (typed-vec #t)
     (typed-vecof #t)

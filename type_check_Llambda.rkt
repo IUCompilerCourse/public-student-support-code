@@ -3,7 +3,7 @@
 (require "type_check_Lvec.rkt")
 (require "type_check_Lvecof.rkt")
 (require "type_check_Lfun.rkt")
-(provide type_check_Llambda type_check_Llambda-has-type
+(provide type_check_Llambda type_check_Llambda_has_type
          type_check_Llambda-class type_check_lambda-mixin typed-vars)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -105,7 +105,7 @@
 (define (type_check_Llambda p)
   (send (new type_check_Llambda-class) type_check_program p))
 
-(define (type_check_Llambda-has-type p)
+(define (type_check_Llambda_has_type p)
   (begin
     (typed-vec #t)
     (typed-vecof #t)

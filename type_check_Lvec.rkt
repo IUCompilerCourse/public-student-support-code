@@ -1,7 +1,7 @@
 #lang racket
 (require "utilities.rkt")
 (require "type_check_Lwhile.rkt")
-(provide type_check_Lvec type_check_Lvec-has-type type_check_Lvec-class
+(provide type_check_Lvec type_check_Lvec_has_type type_check_Lvec-class
          type_check_vec-mixin
          typed-vec)
 
@@ -106,7 +106,7 @@
 (define (type_check_Lvec p)
   (send (new type_check_Lvec-class) type_check_program p))
 
-(define (type_check_Lvec-has-type p)
+(define (type_check_Lvec_has_type p)  
   (typed-vec #t)
   (define result (send (new type_check_Lvec-class) type_check_program p))
   (typed-vec #f)
