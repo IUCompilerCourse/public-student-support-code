@@ -1,0 +1,41 @@
+#lang racket
+(require racket/fixnum)
+(require "utilities.rkt")
+(require "interp_Lwhile.rkt")
+(provide interp_Lvec interp_Lvec-class)
+
+;; Note to maintainers of this code:
+;;   A copy of this interpreter is in the book and should be
+;;   kept in sync with this code.
+
+(define interp_Lvec-class
+  (class interp_Lwhile-class
+    (super-new)
+
+    (define/override (interp-op op)
+      (verbose "Lvec/interp-op" op)
+      (match op
+        ['eq? (lambda (v1 v2)
+                (cond [(or (and (fixnum? v1) (fixnum? v2))
+                           (and (boolean? v1) (boolean? v2))
+                           (and (vector? v1) (vector? v2))
+                           (and (void? v1) (void? v2)))
+                       (eq? v1 v2)]))]
+        ['vector vector]
+        ['vector-length vector-length]
+        ['vector-ref vector-ref]
+        ['vector-set! vector-set!]
+        [else (super interp-op op)]
+        ))
+
+    (define/override ((interp_exp env) e)
+      (define recur (interp_exp env))
+      (verbose "Lvec/interp_exp" e)
+      (match e
+        [(HasType e t)  (recur e)]
+        [else ((super interp_exp env) e)]
+        ))
+    ))
+
+(define (interp_Lvec p)
+  (send (new interp_Lvec-class) interp-program p))

@@ -1,12 +1,12 @@
 #lang racket
 (require racket/set racket/stream)
 (require racket/fixnum)
-(require "interp-Lint.rkt")
-(require "interp-Lvar.rkt")
-(require "interp-Cvar.rkt")
+(require "interp_Lint.rkt")
+(require "interp_Lvar.rkt")
+(require "interp_Cvar.rkt")
 (require "interp.rkt")
-(require "type-check-Lvar.rkt")
-(require "type-check-Cvar.rkt")
+(require "type_check_Lvar.rkt")
+(require "type_check_Cvar.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
@@ -103,9 +103,9 @@
 (define compiler-passes
   `(
      ;; Uncomment the following passes as you finish them.
-     ;; ("uniquify" ,uniquify ,interp_Lvar ,type-check-Lvar)
-     ;; ("remove complex opera*" ,remove-complex-opera* ,interp_Lvar ,type-check-Lvar)
-     ;; ("explicate control" ,explicate-control ,interp-Cvar ,type-check-Cvar)
+     ;; ("uniquify" ,uniquify ,interp_Lvar ,type_check_Lvar)
+     ;; ("remove complex opera*" ,remove-complex-opera* ,interp_Lvar ,type_check_Lvar)
+     ;; ("explicate control" ,explicate-control ,interp_Cvar ,type_check_Cvar)
      ;; ("instruction selection" ,select-instructions ,interp-pseudo-x86-0)
      ;; ("assign homes" ,assign-homes ,interp-x86-0)
      ;; ("patch instructions" ,patch-instructions ,interp-x86-0)

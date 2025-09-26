@@ -1,0 +1,116 @@
+#lang racket
+(require "utilities.rkt")
+(require "type_check_Lwhile.rkt")
+(provide type_check_Lvec type_check_Lvec_has_type type_check_Lvec-class
+         type_check_vec-mixin
+         typed-vec)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  Tuples (aka Vectors)                                                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; type_check_vec-mixin
+
+(define typed-vec (make-parameter #f))
+
+(define (type_check_vec-mixin super-class)
+  (class super-class
+    (super-new)
+    
+    (inherit check-type-equal?)
+    
+    (define/override (type-equal? t1 t2)
+      (debug 'type-equal? "lenient" t1 t2)
+      (match* (t1 t2)
+        [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))
+         ;; We can't require equal lengths because lambda closures
+         ;; need vector subtyping. -Jeremy
+         ;; We need to change the uses of type-equal? into subtyping
+         ;; because the check for Vector types is not symmetric. -Jeremy
+         (and (>= (length ts1) (length ts2))
+              (for/and ([t1 ts1] [t2 ts2])
+                (type-equal? t1 t2)))]
+        [(other wise) (super type-equal? t1 t2)]))
+
+    (define/override (type_check_exp env)
+      (lambda (e)
+        (define recur (type_check_exp env))
+        (match e
+          [(Prim 'vector es)
+           (unless (<= (length es) 50)
+             (error 'type_check "vector too large ~a, max is 50" (length es)))
+           (define-values (e* t*) (for/lists (e* t*) ([e es]) (recur e)))
+           (define t `(Vector ,@t*))
+           (values (cond [(typed-vec) (HasType (Prim 'vector e*) t)]
+                         [else (Prim 'vector e*)])
+                   t)]
+          [(Prim 'vector-ref (list e1 e2))
+           (define-values (e1^ t) (recur e1))
+           (match t
+             [`(Vector ,ts ...)
+              (match e2
+                [(Int i)
+                 (unless (and (0 . <= . i) (i . < . (length ts)))
+                   (error 'type_check "index ~a out of bounds\nin ~v" i e))
+                 (values (Prim 'vector-ref (list e1^ (Int i)))
+                         (list-ref ts i))]
+                [else
+                 (error 'type_check
+                        "expected constant index, not ~a" e2)])]
+             [else (error 'type_check "expect Vector, not ~a\nin ~v" t e)])]
+          [(Prim 'vector-set! (list e1 e2 arg) )
+           (define-values (e-vec t-vec) (recur e1))
+           (define-values (e-arg^ t-arg) (recur arg))
+           (match t-vec
+             [`(Vector ,ts ...)
+              (match e2
+                [(Int i)
+                 (unless (and (0 . <= . i) (i . < . (length ts)))
+                   (error 'type_check "index ~a out of bounds\nin ~v" i e))
+                 (check-type-equal? (list-ref ts i) t-arg e)
+                 (values (Prim 'vector-set! (list e-vec (Int i) e-arg^))
+                         'Void)]
+                [else
+                 (error 'type_check
+                        "expected constant index, not ~a" e2)])]
+             [else (error 'type_check "expect Vector, not ~a\nin ~v" t-vec e)])]
+          [(Prim 'vector-length (list e))
+           (define-values (e^ t) (recur e))
+           (match t
+             [`(Vector ,ts ...)
+              (values (Prim 'vector-length (list e^))  'Integer)]
+             [else (error 'type_check "expect Vector, not ~a\nin ~v" t e)])]
+          [(Prim 'eq? (list arg1 arg2))
+           (define-values (e1 t1) (recur arg1))
+           (define-values (e2 t2) (recur arg2))
+           (match* (t1 t2)
+             [(`(Vector ,ts1 ...)  `(Vector ,ts2 ...))  (void)]
+             [(other wise)  (check-type-equal? t1 t2 e)])
+           (values (Prim 'eq? (list e1 e2)) 'Boolean)]
+          [(GlobalValue name)
+           (values (GlobalValue name) 'Integer)]
+          [(Allocate size t)
+           (values (Allocate size t) t)]
+          [(Collect size)
+           (values (Collect size) 'Void)]
+          [else ((super type_check_exp env) e)]
+          )))
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; type_check_Lvec
+
+(define type_check_Lvec-class (type_check_vec-mixin type_check_Lwhile-class))
+
+(define (type_check_Lvec p)
+  (send (new type_check_Lvec-class) type_check_program p))
+
+(define (type_check_Lvec_has_type p)  
+  (typed-vec #t)
+  (define result (send (new type_check_Lvec-class) type_check_program p))
+  (typed-vec #f)
+  result)
+
+
+
