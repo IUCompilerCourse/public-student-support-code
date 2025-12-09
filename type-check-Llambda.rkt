@@ -4,7 +4,8 @@
 (require "type-check-Lvecof.rkt")
 (require "type-check-Lfun.rkt")
 (provide type-check-Llambda type-check-Llambda-has-type
-         type-check-Llambda-class type-check-lambda-mixin typed-vars)
+         type-check-Llambda-class type-check-lambda-mixin typed-vars
+         type-check-Llambda-typed-vars)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Lambda                                                                    ;;
@@ -114,3 +115,10 @@
     (typed-vecof #f)
     t))
 
+(define type-check-Llambda-typed-vars
+  (lambda (p)
+    (begin
+      (typed-vars #t)
+      (define t (type-check-Llambda p))
+      (typed-vars #f)
+      t)))
