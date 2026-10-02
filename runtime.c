@@ -706,7 +706,7 @@ void print_vector(int64_t* vector_ptr)
       if ((isPointerBits & 1) == 1 && is_ptr((int64_t*)*scan_ptr)) {
         print_vector(to_ptr((int64_t*)*scan_ptr));
       } else {
-        printf("%lld", (int64_t)*scan_ptr);
+        print_int(*scan_ptr);
       }
       isPointerBits = isPointerBits >> 1;
       scan_ptr += 1;
