@@ -31,9 +31,9 @@
                                 ((type-check-exp env) e)))
       (match ty
         [`(,ty^* ... -> ,rt)
-         (for ([arg-ty ty*] [param-ty ty^*])
-           (check-type-equal? arg-ty param-ty (Apply e es)))
-         (values e^ e* rt)]
+		  (let ([expr (Apply e es)])
+			(for-each (lambda (at pt) (check-type-equal? at pt expr)) ty* ty^*))
+		  (values e^ e* rt)]
         [else (error 'type-check "expected a function, not ~a" ty)]))
 
     (define/public (fun-def-type d)
