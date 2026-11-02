@@ -2067,7 +2067,7 @@ Changelog:
                                             [error-expected 'expected-error]
                                             [else 
                                              42])])])
-        (let loop ([passes passes]
+        (let loop ([passes (if (procedure? passes) (passes) passes)]
                    [p tsexp]
                    [tests '()])
           (trace "testing" test-name expected-result)
@@ -2114,10 +2114,15 @@ Changelog:
                        ) ;; cond interp
                  ]
                 ))))))))
+
+(define (compiler-output name base)
+  (if name
+    (format "~a.~a" base name)
+    base))
                                 
-(define (compile passes)
+(define (compile name passes)
   (let ([prog-file-name (vector-ref (current-command-line-arguments) 0)])
-    ((compile-file passes) prog-file-name)))
+    ((compile-file name passes) prog-file-name)))
 
 ;; The compile-file function takes a typechecker and a description of
 ;; the compiler passes (see the comment for check-passes) and returns
@@ -2127,10 +2132,10 @@ Changelog:
 ;; file name but with ".rkt" replaced with ".s". The function then
 ;; returns #t. If the program does not typecheck, the returned
 ;; function will return #f.
-(define (compile-file typechecker passes)
+(define (compile-file name typechecker passes)
   (lambda (prog-file-name)
     (define file-base (string-trim prog-file-name ".rkt"))
-    (define out-file-name (string-append file-base ".s"))
+    (define out-file-name (string-append (compiler-output name file-base) ".s"))
     (trace "testing" prog-file-name)
     (call-with-output-file
       out-file-name
@@ -2140,7 +2145,7 @@ Changelog:
         (define tsexp (test-typecheck typechecker sexp))
         (trace "compile-file: output of type check" tsexp)
         (if tsexp
-            (let ([x86 (let loop ([passes passes] [p tsexp])
+            (let ([x86 (let loop ([passes (if (procedure? passes) (passes) passes)] [p tsexp])
                          (cond [(null? passes) p]
                                [else
                                 (define pass-info (car passes))
@@ -2285,7 +2290,7 @@ Changelog:
        result)]))
 
 (define (compiler-tests-suite name typechecker passes test-family test-nums)
-  (let ([compiler (compile-file typechecker passes)])
+  (let ([compiler (compile-file name typechecker passes)])
     (make-test-suite
      "compiler tests"
      (for/list ([test-number (in-list test-nums)])
@@ -2303,7 +2308,9 @@ Changelog:
                                             "gcc -g -std=c99 -arch x86_64"
                                             "gcc -g -std=c99")
                                         "gcc -g -std=c99 -z noexecstack")])
-		       (let ([gcc-output (system (format "~a runtime.o ./tests/~a.s -o ./tests/~a.out" gcc-cmd test-name test-name))])
+		       (let ([gcc-output
+		             (let ([test-name (compiler-output name test-name)])
+		               (system (format "~a runtime.o ./tests/~a.s -o ./tests/~a.out" gcc-cmd test-name test-name)))])
 			 (if (not gcc-output) (fail "Failed during assembly")
 			     (let ([input (if (file-exists? (format "./tests/~a.in" test-name))
 					      (format " < ./tests/~a.in" test-name)
@@ -2314,7 +2321,7 @@ Changelog:
 						 (lambda (f) (read-line f)))
 					       "42")]
 				   [error-expected (file-exists? (format "./tests/~a.err" test-name))])
-			       (let* ([command (format "./tests/~a.out ~a" test-name input)]
+			       (let* ([command (format "./tests/~a.out ~a" (compiler-output name test-name) input)]
 				      [result (get-value-or-fail command output)])
 				 (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
 				 (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
