@@ -10,7 +10,7 @@
 ;;   A copy of this interpreter is in the book and should be
 ;;   kept in sync with this code. This code does not use
 ;;   the match 'app' feature because the book doesn't introduce
-;;   that until a later.
+;;   that until later.
 
 (define (interp_exp e)
     (match e
