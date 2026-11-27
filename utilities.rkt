@@ -45,6 +45,7 @@ Changelog:
 (require (for-syntax racket))
 					;(require racket/async-channel)
 (require rackunit rackunit/text-ui );rackunit/gui
+(require (only-in ffi/unsafe get-ffi-obj _cprocedure _int _uint64 define-cstruct))
 
 (define (symbolic? e)
   (match e
@@ -2284,7 +2285,27 @@ Changelog:
        (close-output-port out)
        result)]))
 
+;; Starting a subprocess from Racket takes time proportional to the soft
+;; limit on open files. Some systems set that limit very high (e.g.
+;; 1048576), which makes each subprocess (gcc and each test program)
+;; take about 100 ms instead of a few ms. So lower the soft limit to
+;; 1024 on Linux and macOS, ignoring any failure.
+(define-cstruct _rlimit ([cur _uint64] [max _uint64]))
+
+(define (lower-open-file-limit!)
+  (define RLIMIT_NOFILE (case (system-type 'os*) [(linux) 7] [(macosx) 8] [else #f]))
+  (when RLIMIT_NOFILE
+    (with-handlers ([exn:fail? void])
+      (define rlimit-fun (_cprocedure (list _int _rlimit-pointer) _int))
+      (define getrlimit (get-ffi-obj "getrlimit" #f rlimit-fun))
+      (define setrlimit (get-ffi-obj "setrlimit" #f rlimit-fun))
+      (define r (make-rlimit 0 0))
+      (when (and (zero? (getrlimit RLIMIT_NOFILE r)) (> (rlimit-cur r) 1024))
+        (set-rlimit-cur! r 1024)
+        (setrlimit RLIMIT_NOFILE r)))))
+
 (define (compiler-tests-suite name typechecker passes test-family test-nums)
+  (lower-open-file-limit!)
   (let ([compiler (compile-file typechecker passes)])
     (make-test-suite
      "compiler tests"
