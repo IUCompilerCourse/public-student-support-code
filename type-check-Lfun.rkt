@@ -55,8 +55,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type-check-Lfun
 
-;; TODO: Don't allow eq? on function types. -Jeremy
-
 (define type-check-Lfun-class
   (class (type-check-fun-mixin type-check-Lvecof-class)
     (super-new)
@@ -70,6 +68,13 @@
           [(Apply e es)
            (define-values (e^ es^ rt) (type-check-apply env e es))
            (values (Apply e^ es^) rt)]
+          ;; Functions may not be compared with eq?.
+          [(Prim 'eq? (list e1 e2))
+           (define-values (e1^ T1) ((type-check-exp env) e1))
+           (match T1
+             [`(,ts ... -> ,rt)
+              (error 'type-check "cannot compare functions in ~v" e)]
+             [else ((super type-check-exp env) e)])]
           [else ((super type-check-exp env) e)]
           )))
 

@@ -125,6 +125,12 @@
           [(Prim 'eq? (list e1 e2))
            (define-values (e1^ t1) (recur e1))
            (define-values (e2^ t2) (recur e2))
+           ;; Functions may not be compared with eq?.
+           (for ([t (list t1 t2)])
+             (match t
+               [`(,ts ... -> ,rt)
+                (error 'type-check "cannot compare functions in ~v" e)]
+               [else (void)]))
            (check-consistent? t1 t2 e)
            (define T (meet t1 t2))
            (values (Prim 'eq? (list e1^ e2^)) 'Boolean)]
