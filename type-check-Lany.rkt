@@ -153,6 +153,9 @@
            (define-values (e1 t1) (recur arg1))
            (define-values (e2 t2) (recur arg2))
            (match* (t1 t2)
+             ;; functions may not be compared with eq?
+             [(`(,ts ... -> ,rt) _)
+              (error 'type-check "cannot compare functions in ~v" e)]
              ;; allow comparison of vectors of different element types
              [(`(Vector ,ts1 ...) `(Vector ,ts2 ...))   (void)]
              [(`(Vectorof ,t1) `(Vectorof ,t2))         (void)]
